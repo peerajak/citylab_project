@@ -53,7 +53,7 @@ private:
   }
 
   void laser_callback(const sensor_msgs::msg::LaserScan::SharedPtr msg) {
-    const float near_collision = 0.9;
+    const float near_collision = 0.25;
     int rangesize = 719;
     int midrange = rangesize / 2, left_onethird = rangesize / 3,
         right_onethird = rangesize * 2 / 3;
@@ -62,13 +62,12 @@ private:
         msg->ranges[right_onethird] <= near_collision) {
       RCLCPP_INFO(this->get_logger(), "collision ahead %d/%d:%f", midrange,
                   rangesize, msg->ranges[midrange]);
-      ling.linear.x -= 0.001;
-      ling.linear.y += 0.001;
+      ling.linear.x = -0.01;
       ling.angular.z = 1;
     } else {
       RCLCPP_INFO(this->get_logger(), "%d/%d:%f", midrange, rangesize,
                   msg->ranges[midrange]);
-      ling.linear.x += 0.001;
+      ling.linear.x = -0.1;
       ling.angular.z = 0;
     }
   }
