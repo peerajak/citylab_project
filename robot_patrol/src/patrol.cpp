@@ -9,7 +9,9 @@ to
 #include "geometry_msgs/msg/twist.hpp"
 #include "sensor_msgs/msg/detail/laser_scan__struct.hpp"
 #include "sensor_msgs/msg/laser_scan.hpp"
+#include <algorithm>
 #include <chrono>
+#include <cstdlib>
 #include <rclcpp/rclcpp.hpp>
 #include <unistd.h>
 
@@ -34,8 +36,6 @@ public:
         std::bind(&Patrol::laser_callback, this, std::placeholders::_1),
         options1);
 
-    // this->wait_time1 = sleep_timer1;
-
     timer1_ = this->create_wall_timer(
         100ms, std::bind(&Patrol::timer1_callback, this), callback_group_1);
 
@@ -46,31 +46,53 @@ public:
 private:
   void timer1_callback() {
     RCLCPP_INFO(this->get_logger(), "Timer 1 Callback Start");
-    // sleep(this->wait_time1);
     this->move_robot(ling);
     RCLCPP_INFO(this->get_logger(), "Timer 1 Callback End");
   }
 
   void laser_callback(const sensor_msgs::msg::LaserScan::SharedPtr msg) {
     const float near_collision = 0.25;
-    int rangesize = 719;
-    int midrange = rangesize / 2, left_onethird = rangesize / 3,
-        right_onethird = rangesize * 2 / 3;
-    if (msg->ranges[midrange] <= near_collision ||
-        msg->ranges[left_onethird] <= near_collision) {
-      RCLCPP_INFO(this->get_logger(), "collision ahead %d/%d:%f", midrange,
-                  rangesize, msg->ranges[midrange]);
-      ling.linear.x = -0.01;
-      ling.angular.z = 0.7;
-    } else if (msg->ranges[right_onethird] <= near_collision) {
-      ling.linear.x = -0.01;
+    float current_max = 0;
+    int current_max_index;
+    for (int i = 0; i < max_direction_; i++) {
+      if (msg->ranges[i] > current_max) {
+        current_max = msg->ranges[i];
+        current_max_index = i;
+      } else if (msg->ranges[i] == current_max) {
+        if (std::abs(i - max_direction_ / 2) <
+            std::abs(current_max_index - max_direction_ / 2)) {
+          current_max = msg->ranges[i];
+          current_max_index = i;
+        }
+      }
+    }
+    direction_ = current_max_index;
+    // direction_ = *std::max_element(msg->ranges.begin(),msg->ranges.end());
+    ling.linear.x = -0.1;
+    ling.angular.z = (float(direction_) / 4 - float(max_direction_) / 8) / 90 *
+                     3.14 / 2 * 0.3;
+    RCLCPP_INFO(this->get_logger(), "_direction %d:angular velocity z %f",
+                direction_, ling.angular.z);
+    /*
+    int midrange = rangesize / 2, left_onethird =
+    rangesize / 3, right_onethird = rangesize * 2
+    / 3; if (msg->ranges[midrange] <=
+    near_collision || msg->ranges[left_onethird]
+    <= near_collision) {
+      RCLCPP_INFO(this->get_logger(), "collision
+    ahead %d/%d:%f", midrange, rangesize,
+    msg->ranges[midrange]); ling.linear.x =
+    -0.01; ling.angular.z = 0.7; } else if
+    (msg->ranges[right_onethird] <=
+    near_collision) { ling.linear.x = -0.01;
       ling.angular.z = -0.7;
     } else {
-      RCLCPP_INFO(this->get_logger(), "%d/%d:%f", midrange, rangesize,
-                  msg->ranges[midrange]);
+      RCLCPP_INFO(this->get_logger(), "%d/%d:%f",
+    midrange, rangesize, msg->ranges[midrange]);
       ling.linear.x = -0.1;
       ling.angular.z = 0;
     }
+    */
   }
   void move_robot(geometry_msgs::msg::Twist &msg) { publisher1_->publish(msg); }
   geometry_msgs::msg::Twist ling;
@@ -79,7 +101,8 @@ private:
   rclcpp::TimerBase::SharedPtr timer1_;
   rclcpp::Publisher<geometry_msgs::msg::Twist>::SharedPtr publisher1_;
   rclcpp::Subscription<sensor_msgs::msg::LaserScan>::SharedPtr subscription1_;
-  float wait_time1;
+  int direction_; //[0-719]
+  const int max_direction_ = 719;
 };
 
 int main(int argc, char *argv[]) {
