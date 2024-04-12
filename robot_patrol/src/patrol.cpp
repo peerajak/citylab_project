@@ -58,12 +58,14 @@ private:
     int midrange = rangesize / 2, left_onethird = rangesize / 3,
         right_onethird = rangesize * 2 / 3;
     if (msg->ranges[midrange] <= near_collision ||
-        msg->ranges[left_onethird] <= near_collision ||
-        msg->ranges[right_onethird] <= near_collision) {
+        msg->ranges[left_onethird] <= near_collision) {
       RCLCPP_INFO(this->get_logger(), "collision ahead %d/%d:%f", midrange,
                   rangesize, msg->ranges[midrange]);
       ling.linear.x = -0.01;
-      ling.angular.z = 1;
+      ling.angular.z = 0.7;
+    } else if (msg->ranges[right_onethird] <= near_collision) {
+      ling.linear.x = -0.01;
+      ling.angular.z = -0.7;
     } else {
       RCLCPP_INFO(this->get_logger(), "%d/%d:%f", midrange, rangesize,
                   msg->ranges[midrange]);
