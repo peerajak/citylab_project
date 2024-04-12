@@ -20,7 +20,7 @@ using namespace std::chrono_literals;
 
 class Patrol : public rclcpp::Node {
 public:
-  Patrol(float sleep_timer1) : Node("robot_patrol_node") {
+  Patrol() : Node("robot_patrol_node") {
 
     callback_group_1 = this->create_callback_group(
         rclcpp::CallbackGroupType::MutuallyExclusive);
@@ -29,16 +29,15 @@ public:
 
     rclcpp::SubscriptionOptions options1;
     options1.callback_group = callback_group_2;
-
     subscription1_ = this->create_subscription<sensor_msgs::msg::LaserScan>(
         "scan", 10,
         std::bind(&Patrol::laser_callback, this, std::placeholders::_1),
         options1);
 
-    this->wait_time1 = sleep_timer1;
+    // this->wait_time1 = sleep_timer1;
 
     timer1_ = this->create_wall_timer(
-        500ms, std::bind(&Patrol::timer1_callback, this), callback_group_1);
+        100ms, std::bind(&Patrol::timer1_callback, this), callback_group_1);
 
     publisher1_ =
         this->create_publisher<geometry_msgs::msg::Twist>("/cmd_vel", 10);
@@ -47,7 +46,7 @@ public:
 private:
   void timer1_callback() {
     RCLCPP_INFO(this->get_logger(), "Timer 1 Callback Start");
-    sleep(this->wait_time1);
+    // sleep(this->wait_time1);
     this->move_robot(ling);
     RCLCPP_INFO(this->get_logger(), "Timer 1 Callback End");
   }
@@ -87,10 +86,9 @@ int main(int argc, char *argv[]) {
   rclcpp::init(argc, argv);
 
   // Instantiate the Node
-  float sleep_time1 = 1.0;
+  // float sleep_time1 = 1.0;
 
-  std::shared_ptr<Patrol> laser_timer_node =
-      std::make_shared<Patrol>(sleep_time1);
+  std::shared_ptr<Patrol> laser_timer_node = std::make_shared<Patrol>();
 
   // Initialize one MultiThreadedExecutor object
   rclcpp::executors::MultiThreadedExecutor executor;
