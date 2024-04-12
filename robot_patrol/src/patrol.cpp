@@ -70,7 +70,7 @@ private:
     // direction_ = *std::max_element(msg->ranges.begin(),msg->ranges.end());
     ling.linear.x = -0.1;
     ling.angular.z = (float(direction_) / 4 - float(max_direction_) / 8) / 90 *
-                     3.14 / 2 * 0.3;
+                     3.14 / 2 * 0.5;
     RCLCPP_INFO(this->get_logger(), "_direction %d:angular velocity z %f",
                 direction_, ling.angular.z);
     /*
