@@ -11,6 +11,7 @@ to
 #include "sensor_msgs/msg/laser_scan.hpp"
 #include <algorithm>
 #include <chrono>
+#include <cmath>
 #include <cstdlib>
 #include <memory>
 #include <rclcpp/rclcpp.hpp>
@@ -148,6 +149,7 @@ private:
 
     auto it_min = std::min_element(msg->ranges.begin(), msg->ranges.end());
     raw_smallest_value = *it_min;
+    raw_avoid_direction = std::distance(msg->ranges.begin(), it_min);
 
     auto ita = msg->ranges.begin();
     std::shared_ptr<band> b_band(new band(tolerated_min, interested_max));
@@ -204,8 +206,9 @@ private:
       }
     }
 
-    if (raw_smallest_value <= endanged_min) {
-      raw_avoid_direction = std::distance(msg->ranges.begin(), it_min);
+    if (std::abs(band_direction - raw_avoid_direction) <= 250 &&
+        raw_smallest_value <= endanged_min) {
+
       if (std::abs(720 - raw_avoid_direction) <= 250) {
         direction_ = 720 - raw_avoid_direction;
       } else {
