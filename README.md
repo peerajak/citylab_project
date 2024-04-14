@@ -1,4 +1,7 @@
 # Checkpoint 5 ROS2 Basic C++
+## Current Status
+The robot can move 4 rounds before it crash to an obstracle.
+- I think avoiding band shold be calculate, and the feasible band is the prospective bands minus aviding bands
 
 ## Implement the following algorithm inside the laser callback, to identify the safest direction to move next:
 
