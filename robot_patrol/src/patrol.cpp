@@ -133,11 +133,11 @@ private:
   void laser_callback(const sensor_msgs::msg::LaserScan::SharedPtr msg) {
     RCLCPP_DEBUG(this->get_logger(), "Laser Callback Start");
     float speed_x = -0.1;              // prev good value -0.1
-    float interested_max = 20;         // prev good value 10
-    float tolerated_min = 0.36;        // prev good value 0.3
-    float endanged_min = 0.36;         // prev good value 0.3
-    float through_threshold = 0.4;     // prv good value 1.5
-    int smallest_allowable_band = 100; //// prev good value 250
+    float interested_max = 20;         // prev good value 20
+    float tolerated_min = 0.36;        // prev good value 0.36
+    float endanged_min = 0.36;         // prev good value 0.36
+    float through_threshold = 0.4;     // prv good value 0.4
+    int smallest_allowable_band = 100; //// prev good value 100
     std::vector<band> aggregation_of_bands;
     int raw_direction, raw_avoid_direction;
     float raw_largest_value, raw_smallest_value;
