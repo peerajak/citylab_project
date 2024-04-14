@@ -74,10 +74,13 @@ public:
     return std::tuple<int, int>(0, 0);
   }
 
-  int get_direction() {
+  int get_direction(bool broadest_policy) {
     auto it_max = std::max_element(msg_values.begin(), msg_values.end());
-    return msg_index[std::distance(msg_values.begin(), it_max)];
-    // return int((msg_index[0] + msg_index.back()) / 2);
+    int deepest_index = msg_index[std::distance(msg_values.begin(), it_max)];
+    int broadest_index = int((msg_index[0] + msg_index.back()) / 2);
+    if (broadest_policy)
+      return broadest_index;
+    return deepest_index;
   }
 
   int get_size() { return _size; }
@@ -129,14 +132,15 @@ private:
   void laser_callback(const sensor_msgs::msg::LaserScan::SharedPtr msg) {
     RCLCPP_DEBUG(this->get_logger(), "Laser Callback Start");
     float speed_x = -0.1;              // prev good value -0.1
-    float interested_max = 10.0;       // prev good value 10.
-    float tolerated_min = 0.3;         // prev good value 0.3
-    float endanged_min = 0.05;         // prev good value 0.05
-    float through_threshold = 0.9;     // prv good value 0.9
-    int smallest_allowable_band = 360; //// prev good value 360
+    float interested_max = 20;         // prev good value 10
+    float tolerated_min = 0.36;        // prev good value 0.3
+    float endanged_min = 0.36;         // prev good value 0.3
+    float through_threshold = 0.4;     // prv good value 1.5
+    int smallest_allowable_band = 100; //// prev good value 250
     std::vector<band> aggregation_of_bands;
-    int raw_direction, raw_avoid_direction = 1000;
+    int raw_direction, raw_avoid_direction;
     float raw_largest_value, raw_smallest_value;
+    int band_direction;
 
     auto it_max = std::max_element(msg->ranges.begin(), msg->ranges.end());
     raw_direction = std::distance(msg->ranges.begin(), it_max);
@@ -144,10 +148,6 @@ private:
 
     auto it_min = std::min_element(msg->ranges.begin(), msg->ranges.end());
     raw_smallest_value = *it_min;
-    if (raw_smallest_value <= endanged_min) {
-      RCLCPP_INFO(this->get_logger(), "collision ahead ");
-      raw_avoid_direction = std::distance(msg->ranges.begin(), it_min);
-    }
 
     auto ita = msg->ranges.begin();
     std::shared_ptr<band> b_band(new band(tolerated_min, interested_max));
@@ -195,8 +195,8 @@ private:
                    cur_maxfar);
       if (cur_maxfar > max_maxfar) {
         max_maxfar = cur_maxfar;
-        if (std::abs(c_band.get_direction() - raw_avoid_direction) > 180)
-          direction_ = c_band.get_direction();
+        // if (std::abs(c_band.get_direction() - raw_avoid_direction) > 180)
+        band_direction = c_band.get_direction(false);
         RCLCPP_INFO(this->get_logger(),
                     "maxing a band (%d,%d)with max:value %f",
                     std::get<0>(boundary_aband), std::get<1>(boundary_aband),
@@ -204,18 +204,35 @@ private:
       }
     }
 
+    if (raw_smallest_value <= endanged_min) {
+      raw_avoid_direction = std::distance(msg->ranges.begin(), it_min);
+      if (std::abs(720 - raw_avoid_direction) <= 250) {
+        direction_ = 720 - raw_avoid_direction;
+      } else {
+        if ((720 - raw_avoid_direction) < raw_avoid_direction)
+          direction_ = 0;
+        else
+          direction_ = 720;
+      }
+
+      RCLCPP_INFO(this->get_logger(), "collision ahead avoid %d, goto %d",
+                  raw_avoid_direction, direction_);
+      // direction_ = band_direction;
+    } else {
+      direction_ = band_direction;
+    }
+
     ling.linear.x = speed_x;
     ling.angular.z = ((float(direction_) / 4) / 180 * 3.14 - (3.14 / 2)) * 0.5;
     RCLCPP_INFO(this->get_logger(),
-                "_direction %d, raw_direction %d:%f, avoid direction %d "
+                "_direction %d, raw_direction %d:%f "
                 ",angular velocity z %f",
-                direction_, raw_direction, raw_largest_value,
-                raw_avoid_direction, ling.angular.z);
-    if (raw_smallest_value <= endanged_min) {
+                direction_, raw_direction, raw_largest_value, ling.angular.z);
+    /*if (raw_smallest_value <= endanged_min) {
       RCLCPP_INFO(this->get_logger(), "collision ahead ");
       ling.linear.x = -speed_x;
       ling.angular.z = -ling.angular.z;
-    }
+    }*/
   }
   void move_robot(geometry_msgs::msg::Twist &msg) { publisher1_->publish(msg); }
   geometry_msgs::msg::Twist ling;
