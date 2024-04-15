@@ -132,12 +132,14 @@ private:
 
   void laser_callback(const sensor_msgs::msg::LaserScan::SharedPtr msg) {
     RCLCPP_DEBUG(this->get_logger(), "Laser Callback Start");
-    float speed_x = -0.1;              // prev good value -0.1
+    float speed_x = 0.1;               // prev good value -0.1
     float interested_max = 20;         // prev good value 20
-    float tolerated_min = 0.36;        // prev good value 0.36
-    float endanged_min = 0.36;         // prev good value 0.36
+    float tolerated_min = 0.0;         // prev good value 0.36
+    float endanged_min = 0.3;          // prev good value 0.36
     float through_threshold = 0.4;     // prv good value 0.4
-    int smallest_allowable_band = 100; //// prev good value 100
+    int smallest_allowable_band = 120; //// prev good value 100
+    int avoid_gap = 10;                // prev good value 450
+    bool policy_broadest = true; // ture=broadest band, false =farrest band
     std::vector<band> aggregation_of_bands;
     int raw_direction, raw_avoid_direction;
     float raw_largest_value, raw_smallest_value;
@@ -198,39 +200,67 @@ private:
       if (cur_maxfar > max_maxfar) {
         max_maxfar = cur_maxfar;
         // if (std::abs(c_band.get_direction() - raw_avoid_direction) > 180)
-        band_direction = c_band.get_direction(false);
+        band_direction = c_band.get_direction(policy_broadest);
         RCLCPP_INFO(this->get_logger(),
                     "maxing a band (%d,%d)with max:value %f",
                     std::get<0>(boundary_aband), std::get<1>(boundary_aband),
                     cur_maxfar);
       }
     }
-
-    if (std::abs(band_direction - raw_avoid_direction) <= 250 &&
+    RCLCPP_INFO(this->get_logger(),
+                "band_direction %d - raw_avoid_direction%d) , avoid_gap%d",
+                band_direction, raw_avoid_direction, avoid_gap);
+    RCLCPP_INFO(this->get_logger(), "raw_smallest_value %f <= endanged_min %f",
+                raw_smallest_value, endanged_min);
+    if (std::abs(band_direction - raw_avoid_direction) <= 400 &&
         raw_smallest_value <= endanged_min) {
 
-      if (std::abs(720 - raw_avoid_direction) <= 250) {
+      if (std::abs(720 - raw_avoid_direction) <= 200) {
         direction_ = 720 - raw_avoid_direction;
       } else {
-        if ((720 - raw_avoid_direction) < raw_avoid_direction)
+
+        if ((720 - raw_avoid_direction) < raw_avoid_direction) {
+
           direction_ = 0;
-        else
+        } else {
           direction_ = 720;
+        }
       }
 
       RCLCPP_INFO(this->get_logger(), "collision ahead avoid %d, goto %d",
                   raw_avoid_direction, direction_);
-      // direction_ = band_direction;
+
     } else {
+
       direction_ = band_direction;
+      RCLCPP_INFO(this->get_logger(), "through road ahead");
     }
 
     ling.linear.x = speed_x;
-    ling.angular.z = ((float(direction_) / 4) / 180 * 3.14 - (3.14 / 2)) * 0.5;
+    ling.angular.z = -((float(direction_) / 4) / 180 * 3.14 - (3.14 / 2)) * 0.5;
     RCLCPP_INFO(this->get_logger(),
                 "_direction %d, raw_direction %d:%f "
                 ",angular velocity z %f",
                 direction_, raw_direction, raw_largest_value, ling.angular.z);
+    /*
+    int rangesize = 719;
+    int midrange = rangesize / 2, left_onethird = rangesize / 3,
+        right_onethird = rangesize * 2 / 3;
+    if (msg->ranges[midrange] <= endanged_min ||
+        msg->ranges[left_onethird] <= endanged_min ||
+        msg->ranges[right_onethird] <= endanged_min) {
+      RCLCPP_INFO(this->get_logger(), "collision ahead %d/%d:%f", midrange,
+                  rangesize, msg->ranges[midrange]);
+      ling.linear.x = 0.0;
+      ling.linear.y += 0.01;
+      ling.angular.z = 1;
+    } else {
+      RCLCPP_INFO(this->get_logger(), "%d/%d:%f", midrange, rangesize,
+                  msg->ranges[midrange]);
+      ling.linear.x = 0.03;
+      ling.angular.z = 0;
+    }
+     */
     /*if (raw_smallest_value <= endanged_min) {
       RCLCPP_INFO(this->get_logger(), "collision ahead ");
       ling.linear.x = -speed_x;
