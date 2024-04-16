@@ -83,7 +83,7 @@ private:
     float speed_x = 0.1, radian_max = 0, radian_min = 0, radian_select,
           value_select; // prev good value -0.1
     float endanged_min = 0.6;
-    float radian_avoid_gap = pi / 10;
+    float radian_avoid_gap = pi / 8;
 
     std::vector<std::tuple<float, int>> front_ranges;
 
@@ -139,7 +139,7 @@ private:
     }
     if (value_select < endanged_min) {
       RCLCPP_INFO(this->get_logger(), "sharp turning");
-      radian_select = -pi / 2;
+      radian_select = pi / 2;
     }
     RCLCPP_INFO(this->get_logger(), "radian select %f,%f", radian_select,
                 value_select);

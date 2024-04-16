@@ -1,7 +1,10 @@
 # Checkpoint 5 ROS2 Basic C++
 ## Current Status
-The robot can move 4 rounds before it crash to an obstracle.
-- I think avoiding band shold be calculate, and the feasible band is the prospective bands minus aviding bands
+After understanding the laser scan direction, I successfully create a forever loop.
+However, if the world is more difficult, this method still make the robot collide with obstrucles.
+This is because the gready choose of the longest scan direction may leads to wrong direction.
+Plan* Solution
+- using band of rays, and remove those bands which are too small.
 
 ## Implement the following algorithm inside the laser callback, to identify the safest direction to move next:
 
