@@ -30,8 +30,13 @@ add_executable(robot_patrol_node src/patrol.cpp)
 ament_target_dependencies(robot_patrol_node 
 rclcpp sensor_msgs geometry_msgs nav_msgs)
 
+add_executable(understand_laser_node src/understand_laser.cpp)
+ament_target_dependencies(understand_laser_node 
+rclcpp sensor_msgs geometry_msgs nav_msgs)
+
 install(TARGETS
    robot_patrol_node
+   understand_laser_node
    DESTINATION lib/${PROJECT_NAME}
  )
 
