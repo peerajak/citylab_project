@@ -46,9 +46,9 @@ float degree_from_scan_index(int scan_index) {
   return deg;
 };
 
-class UnderstandLaser : public rclcpp::Node {
+class Patrol : public rclcpp::Node {
 public:
-  UnderstandLaser() : Node("understand_laser_node") {
+  Patrol() : Node("robot_patrol_node") {
 
     callback_group_1 = this->create_callback_group(
         rclcpp::CallbackGroupType::MutuallyExclusive);
@@ -59,13 +59,11 @@ public:
     options1.callback_group = callback_group_2;
     subscription1_ = this->create_subscription<sensor_msgs::msg::LaserScan>(
         "scan", 10,
-        std::bind(&UnderstandLaser::laser_callback, this,
-                  std::placeholders::_1),
+        std::bind(&Patrol::laser_callback, this, std::placeholders::_1),
         options1);
 
     timer1_ = this->create_wall_timer(
-        100ms, std::bind(&UnderstandLaser::timer1_callback, this),
-        callback_group_1);
+        100ms, std::bind(&Patrol::timer1_callback, this), callback_group_1);
 
     publisher1_ =
         this->create_publisher<geometry_msgs::msg::Twist>("/cmd_vel", 10);
@@ -82,7 +80,7 @@ private:
     RCLCPP_INFO(this->get_logger(), "Laser Callback Start");
     float speed_x = 0.1, radian_max = 0, radian_min = 0, radian_select,
           value_select; // prev good value -0.1
-    float endanged_min = 0.5;
+    float endanged_min = 0.6;
     float radian_avoid_gap = pi / 8;
 
     std::vector<std::tuple<float, int>> front_ranges;
@@ -163,8 +161,7 @@ int main(int argc, char *argv[]) {
   // Instantiate the Node
   // float sleep_time1 = 1.0;
 
-  std::shared_ptr<UnderstandLaser> laser_timer_node =
-      std::make_shared<UnderstandLaser>();
+  std::shared_ptr<Patrol> laser_timer_node = std::make_shared<Patrol>();
 
   // Initialize one MultiThreadedExecutor object
   rclcpp::executors::MultiThreadedExecutor executor;
