@@ -26,6 +26,17 @@ using namespace std::chrono_literals;
 
 #define pi 3.14
 
+int scan_index_from_radian(float radian) {
+  int indx;
+
+  if (radian >= 0 && radian <= (pi / 2)) {
+    indx = int((2 / pi) * 165 * radian);
+  } else if (radian < 0 && radian >= -(pi / 2)) {
+    indx = int((2 / pi) * 165 * radian + 659);
+  }
+  return indx;
+};
+
 float radian_from_scan_index(int scan_index) {
   float rad;
   if (659 >= scan_index && scan_index >= 495) {
@@ -46,9 +57,9 @@ float degree_from_scan_index(int scan_index) {
   return deg;
 };
 
-class UnderstandLaser : public rclcpp::Node {
+class Patrol : public rclcpp::Node {
 public:
-  UnderstandLaser() : Node("understand_laser_node") {
+  Patrol() : Node("robot_patrol_node") {
 
     callback_group_1 = this->create_callback_group(
         rclcpp::CallbackGroupType::MutuallyExclusive);
@@ -59,13 +70,11 @@ public:
     options1.callback_group = callback_group_2;
     subscription1_ = this->create_subscription<sensor_msgs::msg::LaserScan>(
         "scan", 10,
-        std::bind(&UnderstandLaser::laser_callback, this,
-                  std::placeholders::_1),
+        std::bind(&Patrol::laser_callback, this, std::placeholders::_1),
         options1);
 
     timer1_ = this->create_wall_timer(
-        100ms, std::bind(&UnderstandLaser::timer1_callback, this),
-        callback_group_1);
+        100ms, std::bind(&Patrol::timer1_callback, this), callback_group_1);
 
     publisher1_ =
         this->create_publisher<geometry_msgs::msg::Twist>("/cmd_vel", 10);
@@ -82,8 +91,10 @@ private:
     RCLCPP_INFO(this->get_logger(), "Laser Callback Start");
     float speed_x = 0.1, radian_max = 0, radian_min = 0, radian_select,
           value_select; // prev good value -0.1
-    float endanged_min = 0.6;
-    float radian_avoid_gap = pi / 3;
+    int index_select;
+    float endanged_min = 0.5;
+    const float angle_increment = 0.009529590606689453;
+    float radian_avoid_gap = pi / 8, radian_check_ahead_gap = pi / 20;
 
     std::vector<std::tuple<float, int>> front_ranges;
 
@@ -124,22 +135,58 @@ private:
     radian_min = radian_from_scan_index(min_index);
     radian_select = radian_max;
     value_select = max_value;
+    index_select = max_index;
     if (std::abs(radian_max - radian_min) < radian_avoid_gap) {
 
       auto ita = front_ranges.begin();
       do {
         if (std::get<0>(*ita) > endanged_min) {
-          radian_select = radian_from_scan_index(std::get<1>(*ita));
+          index_select = std::get<1>(*ita);
+          radian_select = radian_from_scan_index(index_select);
           value_select = std::get<0>(*ita);
         }
         ita++;
-        RCLCPP_INFO(this->get_logger(), "selecting new angle");
+
       } while (std::abs(radian_select - radian_min) < radian_avoid_gap &&
                ita < front_ranges.end());
     }
-    if (value_select < endanged_min) {
+    float checking_ahead_radian_min =
+        radian_select - radian_check_ahead_gap / 2;
+    float checking_ahead_radian_max =
+        radian_select + radian_check_ahead_gap / 2;
+    float checking_iter = checking_ahead_radian_min;
+    float checking_value, found_value, found_radian;
+    int checking_index;
+    bool ahead_obstracle = false;
+    while (checking_iter < checking_ahead_radian_max) {
+
+      checking_index = scan_index_from_radian(checking_iter);
+
+      for (auto it = front_ranges.begin(); it < front_ranges.end(); it++) {
+        if (checking_index == std::get<1>(*it)) {
+
+          checking_value = std::get<0>(*it);
+          if (checking_value < endanged_min) {
+            ahead_obstracle = true;
+            found_value = checking_value;
+            found_radian = checking_iter;
+            RCLCPP_INFO(this->get_logger(),
+                        "found radian  %f has obstrucle ahead %f meter",
+                        checking_iter, checking_value);
+          }
+        }
+      }
+
+      checking_iter += angle_increment;
+    }
+
+    if (ahead_obstracle) {
       RCLCPP_INFO(this->get_logger(), "sharp turning");
-      radian_select = -pi / 2;
+      if (found_radian > 0) {
+        radian_select = pi / 2;
+      } else {
+        radian_select = -pi / 2;
+      }
     }
     RCLCPP_INFO(this->get_logger(), "radian select %f,%f", radian_select,
                 value_select);
@@ -163,8 +210,7 @@ int main(int argc, char *argv[]) {
   // Instantiate the Node
   // float sleep_time1 = 1.0;
 
-  std::shared_ptr<UnderstandLaser> laser_timer_node =
-      std::make_shared<UnderstandLaser>();
+  std::shared_ptr<Patrol> laser_timer_node = std::make_shared<Patrol>();
 
   // Initialize one MultiThreadedExecutor object
   rclcpp::executors::MultiThreadedExecutor executor;

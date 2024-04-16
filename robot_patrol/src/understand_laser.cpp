@@ -83,7 +83,7 @@ private:
     float speed_x = 0.1, radian_max = 0, radian_min = 0, radian_select,
           value_select; // prev good value -0.1
     float endanged_min = 0.6;
-    float radian_avoid_gap = pi / 3;
+    float radian_avoid_gap = pi / 10;
 
     std::vector<std::tuple<float, int>> front_ranges;
 
@@ -133,7 +133,7 @@ private:
           value_select = std::get<0>(*ita);
         }
         ita++;
-        RCLCPP_INFO(this->get_logger(), "selecting new angle");
+        // RCLCPP_INFO(this->get_logger(), "selecting new angle");
       } while (std::abs(radian_select - radian_min) < radian_avoid_gap &&
                ita < front_ranges.end());
     }
