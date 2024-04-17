@@ -26,6 +26,7 @@ using std::placeholders::_1;
 using namespace std::chrono_literals;
 
 #define pi 3.14
+#define policy_broadest false
 const float angle_increment = 0.00953;
 int scan_index_from_radian(float radian) {
   int indx;
@@ -118,6 +119,10 @@ public:
     return std::tuple<float, float>(0, 0);
   }
 
+  float get_deepest_value() {
+    auto it_max = std::max_element(msg_values.begin(), msg_values.end());
+    return *it_max;
+  }
   std::tuple<float, float> get_deepest_radian() {
     auto it_max = std::max_element(msg_values.begin(), msg_values.end());
     int deepest_radian = msg_radian[std::distance(msg_values.begin(), it_max)];
@@ -192,25 +197,25 @@ private:
     int index_select;
     float interested_max = 5.0; // prev good value 20
     float tolerated_min =
-        0.6; // This value helps avoid obstrucle, set it high >0.7
-    float endanged_min = 0.5;
+        0.4; // This value helps avoid obstrucle, set it high >0.7
+    float endanged_min = 0.35;
     std::vector<band> aggregation_of_bands;
     float radian_avoid_gap = pi / 3, radian_check_ahead_gap = pi / 3;
-    int smallest_allowable_band = 60; //// prev good value 100
-    float wide_band_max = 1.5, wide_band_min = endanged_min;
+    int smallest_allowable_band = 120; //// prev good value 100
+    // float wide_band_max = 1.5, wide_band_min = endanged_min;
 
     std::vector<std::tuple<float, int>> front_ranges;
 
     for (int i = 0; i < 165; i++) {
-      if (msg->ranges[i] < 200 && msg->ranges[i] > wide_band_min) {
-        front_ranges.push_back(std::tuple<float, int>(msg->ranges[i], i));
-      }
+      // if (msg->ranges[i] < 200 && msg->ranges[i] > wide_band_min) {
+      front_ranges.push_back(std::tuple<float, int>(msg->ranges[i], i));
+      //}
     }
 
     for (int i = 495; i < 660; i++) {
-      if (msg->ranges[i] < 200 && msg->ranges[i] > wide_band_min) {
-        front_ranges.push_back(std::tuple<float, int>(msg->ranges[i], i));
-      }
+      // if (msg->ranges[i] < 200 && msg->ranges[i] > wide_band_min) {
+      front_ranges.push_back(std::tuple<float, int>(msg->ranges[i], i));
+      // }
     }
 
     auto ita = front_ranges.begin();
@@ -248,17 +253,29 @@ private:
     }
 
     // find biggest band
-    RCLCPP_INFO(this->get_logger(), "aggregation_of_bands size  %d",
+
+#if policy_broadest
+    RCLCPP_INFO(this->get_logger(),
+                "aggregation_of_bands size  %d finding broadest",
                 aggregation_of_bands.size());
     auto result_it = std::max_element(
         aggregation_of_bands.begin(), aggregation_of_bands.end(),
         [](band a, band b) { return a.get_size() < b.get_size(); });
 
+#else
+    RCLCPP_INFO(this->get_logger(),
+                "aggregation_of_bands size  %d finding deepest",
+                aggregation_of_bands.size());
+    auto result_it =
+        std::max_element(aggregation_of_bands.begin(),
+                         aggregation_of_bands.end(), [](band a, band b) {
+                           return a.get_deepest_value() < b.get_deepest_value();
+                         });
+#endif
     if (result_it != aggregation_of_bands.end()) {
       band &c_band = *result_it;
       std::tuple<float, float> boundary_aband = c_band.get_boundary();
-      RCLCPP_INFO(this->get_logger(),
-                  "found largest band (%f,%f) size%d with max:value %f",
+      RCLCPP_INFO(this->get_logger(), "found (%f,%f) size%d with max:value %f",
                   std::get<0>(boundary_aband), std::get<1>(boundary_aband),
                   c_band.get_size(), c_band.get_statistic_max());
 
@@ -266,6 +283,11 @@ private:
       radian_select = std::get<0>(result_tuple);
       value_select = std::get<1>(result_tuple);
     }
+    /*
+    if (value_select < endanged_min) {
+      RCLCPP_INFO(this->get_logger(), "sharp turning");
+      radian_select = pi / 2;
+    }*/
     // step 0. class band (min_radian, max_radian), get mean_radian
     // step 1. class band constructor for loop front_ranges and insert
     // consecutive radian into a band step 2. class band zoo insert only large
