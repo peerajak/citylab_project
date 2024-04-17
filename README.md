@@ -1,10 +1,9 @@
 # Checkpoint 5 ROS2 Basic C++
 ## Current Status
-After understanding the laser scan direction, I successfully create a forever loop.
-However, if the world is more difficult, this method still make the robot collide with obstrucles.
-This is because the gready choose of the longest scan direction may leads to wrong direction.
-Plan* Solution
-- using band of rays, and remove those bands which are too small.
+Done 2 real robot sessions.
+Using broadest band policy provides the best obstracle avoding for robot in simulation, fully successful.
+Real robot, however, move quite different than the simulation, and thus I can see it tried to avoid the obstracle,
+but yet to be fully successful.
 
 ## Implement the following algorithm inside the laser callback, to identify the safest direction to move next:
 
