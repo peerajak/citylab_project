@@ -109,7 +109,7 @@ public:
     }
   }
 
-  std::tuple<float, float> get_boundary() {
+  std::tuple<float, float> get_boundary() { // return min,max
 
     if (msg_radian.size() > 1)
       return std::tuple<float, float>(msg_radian[0], msg_radian.back());
@@ -128,6 +128,13 @@ public:
     int deepest_radian = msg_radian[std::distance(msg_values.begin(), it_max)];
 
     return std::tuple<float, float>(deepest_radian, *it_max);
+  }
+  std::tuple<float, float> get_shallowest_radian() {
+    auto it_min = std::min_element(msg_values.begin(), msg_values.end());
+    int shallowest_radian =
+        msg_radian[std::distance(msg_values.begin(), it_min)];
+
+    return std::tuple<float, float>(shallowest_radian, *it_min);
   }
 
   std::tuple<float, float> get_broadest_mid_radian() {
@@ -184,6 +191,28 @@ public:
   }
 
 private:
+  float calculate_best_radian_from_min_max(
+      float radian_max, float radian_min, float max_value,
+      float radian_avoid_gap, float endanged_min,
+      std::vector<std::tuple<float, int>> &front_ranges) {
+
+    float radian_select = radian_max;
+    float value_select = max_value;
+    if (std::abs(radian_max - radian_min) < radian_avoid_gap) {
+
+      auto ita = front_ranges.begin();
+      do {
+        if (std::get<0>(*ita) > endanged_min) {
+          radian_select = radian_from_scan_index(std::get<1>(*ita));
+          value_select = std::get<0>(*ita);
+        }
+        ita++;
+        // RCLCPP_INFO(this->get_logger(), "selecting new angle");
+      } while (std::abs(radian_select - radian_min) < radian_avoid_gap &&
+               ita < front_ranges.end());
+    }
+    return radian_select;
+  }
   void timer1_callback() {
     RCLCPP_DEBUG(this->get_logger(), "Timer 1 Callback Start");
     this->move_robot(ling);
@@ -201,21 +230,19 @@ private:
     float endanged_min = 0.35;
     std::vector<band> aggregation_of_bands;
     float radian_avoid_gap = pi / 3, radian_check_ahead_gap = pi / 3;
-    int smallest_allowable_band = 120; //// prev good value 100
+    int smallest_allowable_band = 80; //// at least 120
     // float wide_band_max = 1.5, wide_band_min = endanged_min;
 
     std::vector<std::tuple<float, int>> front_ranges;
-
-    for (int i = 0; i < 165; i++) {
-      // if (msg->ranges[i] < 200 && msg->ranges[i] > wide_band_min) {
-      front_ranges.push_back(std::tuple<float, int>(msg->ranges[i], i));
-      //}
-    }
-
     for (int i = 495; i < 660; i++) {
       // if (msg->ranges[i] < 200 && msg->ranges[i] > wide_band_min) {
       front_ranges.push_back(std::tuple<float, int>(msg->ranges[i], i));
       // }
+    }
+    for (int i = 0; i < 165; i++) {
+      // if (msg->ranges[i] < 200 && msg->ranges[i] > wide_band_min) {
+      front_ranges.push_back(std::tuple<float, int>(msg->ranges[i], i));
+      //}
     }
 
     auto ita = front_ranges.begin();
@@ -282,7 +309,40 @@ private:
       std::tuple<float, float> result_tuple = c_band.get_broadest_mid_radian();
       radian_select = std::get<0>(result_tuple);
       value_select = std::get<1>(result_tuple);
+#if 0
+      std::tuple<float, float> deepest_tuple = c_band.get_deepest_radian();
+      radian_max = std::get<0>(deepest_tuple);
+      int max_value = std::get<1>(deepest_tuple);
+      std::tuple<float, float> shallowest_tuple =
+          c_band.get_shallowest_radian();
+      radian_min = std::get<0>(shallowest_tuple);
+      // int min_value= std::get<1>(shallowest_tuple);
+      radian_select = calculate_best_radian_from_min_max(
+          radian_max, radian_min, max_value, radian_avoid_gap, endanged_min,
+          front_ranges);
+#endif
     }
+#if 0
+    else {
+      int min_index = std::get<1>(front_ranges[0]);
+      float min_value = std::get<0>(front_ranges[0]);
+
+      int max_index = std::get<1>(front_ranges.back());
+      float max_value = std::get<0>(front_ranges.back());
+
+      // RCLCPP_INFO(this->get_logger(),
+      //             "_direction %d:%f, %d:%f, %d:%f min at %d,%f max at %d,%f",
+      //             0,
+      //            msg->ranges[0], 360, msg->ranges[360], 659,
+      //            msg->ranges[659], min_index, *it_min, max_index, *it_max);
+
+      radian_max = radian_from_scan_index(max_index);
+      radian_min = radian_from_scan_index(min_index);
+      radian_select = calculate_best_radian_from_min_max(
+          radian_max, radian_min, max_value, radian_avoid_gap, endanged_min,
+          front_ranges);
+    }
+#endif
     /*
     if (value_select < endanged_min) {
       RCLCPP_INFO(this->get_logger(), "sharp turning");
