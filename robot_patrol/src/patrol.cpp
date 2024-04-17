@@ -139,11 +139,11 @@ public:
 
   std::tuple<float, float> get_broadest_mid_radian() {
     float broadest_radian = (msg_radian[0] + msg_radian.back()) / 2;
-    auto find_it = std::find_if(msg_radian.begin(), msg_radian.end(),
+    /*auto find_it = std::find_if(msg_radian.begin(), msg_radian.end(),
                                 [&broadest_radian](float r) {
-                                  return std::abs(r - broadest_radian) < 0.001;
-                                });
-    return std::tuple<float, float>(broadest_radian, *find_it);
+                                  return std::abs(r - broadest_radian) < 0.1;
+                                });*/
+    return std::tuple<float, float>(broadest_radian, get_statistic_min());
   }
 
   int get_size() { return _size; }
@@ -343,11 +343,11 @@ private:
           front_ranges);
     }
 #endif
-    /*
+
     if (value_select < endanged_min) {
       RCLCPP_INFO(this->get_logger(), "sharp turning");
-      radian_select = pi / 2;
-    }*/
+      radian_select = -pi / 2;
+    }
     // step 0. class band (min_radian, max_radian), get mean_radian
     // step 1. class band constructor for loop front_ranges and insert
     // consecutive radian into a band step 2. class band zoo insert only large

@@ -82,7 +82,7 @@ private:
     RCLCPP_INFO(this->get_logger(), "Laser Callback Start");
     float speed_x = 0.1, radian_max = 0, radian_min = 0, radian_select,
           value_select; // prev good value -0.1
-    float endanged_min = 0.5;
+    float endanged_min = 0.8;
     float radian_avoid_gap = pi / 8;
 
     std::vector<std::tuple<float, int>> front_ranges;
