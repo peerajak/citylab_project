@@ -1,0 +1,55 @@
+# Checkpont 6 Plan
+## Task 1
+
+- create a pkg with 
+ros2 pkg create --build-type ament_cmake --dependencies rclcpp std_srvs sensor_msgs geometry_msgs
+(no need nav_msgs because this is for odometer, in task2)
+
+- create custom srv message.
+build it and Test it with ro2 interface list.
+
+- Write .cpp file to create service server, binding the callback
+Create the C++ file
+
+Inside the robot_patrol package create a new C++ file named direction_service.cpp
+Create the service server
+
+Inside the direction_service.cpp file, create a clase named DirectionService that will contain the code of your node.
+Include on that class a service server named /direction_service
+Include everything required to have a main that launches the server
+Analyze the laser data
+
+When called, the /direction_service will receive the current laser data from the caller
+Then. divide the laser rays received into 3 different sections of 60º each, as described in the picture
+
+Decide which is the safest direction for the robot to move next as follows:
+
+Get all the distances measured for each section and add them up:
+
+total_dist_sec_right
+total_dist_sec_front
+total_dist_sec_left
+The section that has the largest total, is the section towards which the robot must move to
+
+This is still a very simple algorithm for patrolling, but a little bit more robust than the one of previous section.
+
+
+
+- GetDirection.srv
+sensor_msgs/LaserScan laser_data
+---
+string direction
+
+
+- Client
+How can you test and debug the service server independently of the code of Task 1? By doing the following steps:
+
+Inside the robot_patrol package create a new C++ file named test_service.cpp
+Inside this file, create a simple node that does the following:
+It subscribes to the laser data ** Laser data is sub by the client
+In the callback, it calls the /direction_service service with the proper data
+It prints the response returned by the service
+Create a launch file named start_test_service.launch.py that launches the test_service.cpp program.
+Put the simulated robot in a proper location for your test. You can do that using the teleop_twist_keyboard node (see Notes below)
+Launch the service server node using the start_direction_service.launch.py file
+Launch the tester node using the start_test_service.launch.py file
