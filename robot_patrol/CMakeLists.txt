@@ -5,6 +5,7 @@ if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   add_compile_options(-Wall -Wextra -Wpedantic)
 endif()
 
+
 #set(CMAKE_BUILD_TYPE Debug)
 # find dependencies
 find_package(ament_cmake REQUIRED)
@@ -12,6 +13,8 @@ find_package(rclcpp REQUIRED)
 find_package(sensor_msgs REQUIRED)
 find_package(geometry_msgs REQUIRED)
 find_package(nav_msgs REQUIRED)
+find_package(rosidl_default_generators REQUIRED)
+
 
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
@@ -26,6 +29,28 @@ if(BUILD_TESTING)
 endif()
 
 
+
+
+
+rosidl_generate_interfaces(${PROJECT_NAME}
+  "srv/GetDirection.srv"
+   DEPENDENCIES sensor_msgs
+)
+
+rosidl_get_typesupport_target(cpp_typesupport_target
+  ${PROJECT_NAME} rosidl_typesupport_cpp)
+
+add_executable(test_direction_service_node src/test_service.cpp)
+target_link_libraries(test_direction_service_node "${cpp_typesupport_target}")
+ament_target_dependencies(test_direction_service_node
+rclcpp sensor_msgs geometry_msgs nav_msgs)
+
+add_executable(direction_service_node src/direction_service.cpp)
+target_link_libraries(direction_service_node "${cpp_typesupport_target}")
+ament_target_dependencies(direction_service_node
+rclcpp sensor_msgs geometry_msgs nav_msgs)
+
+
 add_executable(robot_patrol_node src/patrol.cpp)
 ament_target_dependencies(robot_patrol_node 
 rclcpp sensor_msgs geometry_msgs nav_msgs)
@@ -34,9 +59,12 @@ add_executable(understand_laser_node src/understand_laser.cpp)
 ament_target_dependencies(understand_laser_node 
 rclcpp sensor_msgs geometry_msgs nav_msgs)
 
+
 install(TARGETS
    robot_patrol_node
    understand_laser_node
+   test_direction_service_node
+   direction_service_node
    DESTINATION lib/${PROJECT_NAME}
  )
 
