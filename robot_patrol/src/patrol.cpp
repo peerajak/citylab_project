@@ -23,8 +23,6 @@ to
 using namespace std::chrono_literals;
 using std::placeholders::_1;
 
-using namespace std::chrono_literals;
-
 #define pi 3.14
 #define policy_broadest false
 const float angle_increment = 0.00953;
@@ -404,5 +402,5 @@ case 2 495-659 has 165 lines of scan
 495-659 is -pi/2-0
 radian = (direction-659)/164*pi/2
 
-We will test this tomorrow
+
 */

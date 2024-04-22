@@ -1,0 +1,24 @@
+user:~$ cat how_change_world.txt
+   29  cp ~/let_poles ./share/turtlebot3_gazebo/worlds//realrobotlab_v1_left_poles.world
+   30  cp ~/right_poles  ./share/turtlebot3_gazebo/worlds//realrobotlab_v1_right_poles.world
+   36  cp right_poles simulation_ws/install/turtlebot3_gazebo/share/turtlebot3_gazebo/worlds/realrobotlab_v1_right_poles.world
+   38  cp let_poles simulation_ws/install/turtlebot3_gazebo/share/turtlebot3_gazebo/worlds/realrobotlab_v1_right_poles.world
+   45  cp ~/simulation_ws/install/turtlebot3_gazebo/share/turtlebot3_gazebo/worlds/realrobotlab_v1.world ~/simulation_ws/install/turtlebot3_gazebo/share/turtlebot3_gazebo/worlds/realrobotlab_v1_original.world
+   46  cp right_poles ~/simulation_ws/install/turtlebot3_gazebo/share/turtlebot3_gazebo/worlds/realrobotlab_v1_right_poles.world
+   47  cp let_poles ~/simulation_ws/install/turtlebot3_gazebo/share/turtlebot3_gazebo/worlds/realrobotlab_v1_left_poles.world
+   58  cp let_poles ~/simulation_ws/install/turtlebot3_gazebo/share/turtlebot3_gazebo/worlds/realrobotlab_v1_current.world
+   60  cp ~/simulation_ws/install/turtlebot3_gazebo/share/turtlebot3_gazebo/worlds/realrobotlab_v1.world ./realrobotlab_v1_original.world
+   61  cp realrobotlab_v1_original.world ~/simulation_ws/install/turtlebot3_gazebo/share/turtlebot3_gazebo/worlds/realrobotlab_v1_current.world
+   66  cp more_difficult.world ~/simulation_ws/install/turtlebot3_gazebo/share/turtlebot3_gazebo/worlds/realrobotlab_v1_more_difficult.world
+   67  cp more_difficult.world ~/simulation_ws/install/turtlebot3_gazebo/share/turtlebot3_gazebo/worlds/realrobotlab_v1_current.world
+   72  cp let_poles  ~/simulation_ws/install/turtlebot3_gazebo/share/turtlebot3_gazebo/worlds/realrobotlab_v1_current.world
+   84  history | grep cp
+   88  history | grep cp > how_change_world.txt
+
+user:~/simulation_ws/install/turtlebot3_gazebo/share/turtlebot3_gazebo/launch$ grep realrobotlab_v1 *
+grep: __pycache__: Is a directory
+start_turtlebot3_world.launch.py:          default_value=[os.path.join(pkg_box_bot_gazebo, 'worlds', 'realrobotlab_v1.world'), ''],
+
+
+change sensor visual to true here
+~/simulation_ws/src/turtlebot3_ros2/turtlebot3_gazebo/models/turtlebot3_burger$ vi model.sdf

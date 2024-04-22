@@ -83,7 +83,7 @@ private:
     float speed_x = 0.1, radian_max = 0, radian_min = 0, radian_select,
           value_select; // prev good value -0.1
     float endanged_min = 0.8;
-    float radian_avoid_gap = pi / 8;
+    float radian_avoid_gap = pi / 6;
 
     std::vector<std::tuple<float, int>> front_ranges;
 
@@ -124,6 +124,9 @@ private:
     radian_min = radian_from_scan_index(min_index);
     radian_select = radian_max;
     value_select = max_value;
+    RCLCPP_INFO(this->get_logger(),
+                "radian with max distance %f, radian min distance %f",
+                radian_max, radian_min);
     if (std::abs(radian_max - radian_min) < radian_avoid_gap) {
 
       auto ita = front_ranges.begin();
@@ -145,7 +148,7 @@ private:
                 value_select);
 
     ling.angular.z = 0.5 * radian_select;
-    ling.linear.x = speed_x;
+    ling.linear.x = 0; // speed_x;
   }
   void move_robot(geometry_msgs::msg::Twist &msg) { publisher1_->publish(msg); }
   geometry_msgs::msg::Twist ling;
@@ -192,5 +195,4 @@ case 2 495-659 has 165 lines of scan
 495-659 is -pi/2-0
 radian = (direction-659)/164*pi/2
 
-We will test this tomorrow
 */

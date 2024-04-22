@@ -7,6 +7,43 @@
 using GetDirection = robot_patrol::srv::GetDirection;
 using std::placeholders::_1;
 using std::placeholders::_2;
+#define pi 3.14
+
+const float angle_increment = 0.00953;
+
+/*
+angle_min: 0.0
+angle_max: 6.28000020980835
+angle_increment: 0.009529590606689453
+
+Thus there are 6.28/0.00953 = 659 lines for 360 degree (6.28=2pi)
+0,659 degree msg->range[0] start from x axis,
+164 degree msg->range[164] means x +90degree,
+495 degree msg->range[495] means x -90degree.
+
+case 1. 0-164 has 165 lines of scan
+0-164 is 0-pi/2
+radian = (direction_/164)*(pi/2)
+
+case 2 495-659 has 165 lines of scan
+495-659 is -pi/2-0
+radian = (direction-659)/164*pi/2
+
+My understanding is direction x = 0 degree. CCW is positive, CW is
+negative. Thus, left hand side of the robot is +90 degree, and right hand
+side of the robot is -90 degree
+*/
+
+int scan_index_from_radian(float radian) {
+  int indx;
+
+  if (radian >= 0 && radian <= (pi / 2)) {
+    indx = int((2 / pi) * 165 * radian);
+  } else if (radian < 0 && radian >= -(pi / 2)) {
+    indx = int((2 / pi) * 165 * radian + 659);
+  }
+  return indx;
+};
 
 class DirectionService : public rclcpp::Node {
 public:
@@ -14,7 +51,7 @@ public:
 
     srv_ = create_service<GetDirection>(
         "direction_service",
-        std::bind(&DirectionService::moving_callback, this, _1, _2));
+        std::bind(&DirectionService::service_callback, this, _1, _2));
     publisher_ =
         this->create_publisher<geometry_msgs::msg::Twist>("cmd_vel", 10);
   }
@@ -23,21 +60,48 @@ private:
   rclcpp::Service<GetDirection>::SharedPtr srv_;
   rclcpp::Publisher<geometry_msgs::msg::Twist>::SharedPtr publisher_;
 
-  void moving_callback(const std::shared_ptr<GetDirection::Request> request,
-                       const std::shared_ptr<GetDirection::Response> response) {
+  void
+  service_callback(const std::shared_ptr<GetDirection::Request> request,
+                   const std::shared_ptr<GetDirection::Response> response) {
     RCLCPP_INFO(this->get_logger(), "laser frame id %s",
                 request->laser_data.header.frame_id.c_str());
-    // sensor_msgs::msg::LaserScan::SharedPtr msg
-    //  sensor_msgs::msg::LaserScan msg;
-    //  msg = request->laser_data;
-    // RCLCPP_INFO(this->get_logger(), "laser data[%d]: %f", i,
-    //           request->laser_data.ranges[i]);
-    for (int i = 0; i < 10; i++) {
-      RCLCPP_INFO(this->get_logger(), "laser data[%d]: %f", i,
-                  request->laser_data.ranges[i]);
-    }
 
-    response->direction = "test";
+    float left_radian_threshold = pi / 6;
+    float right_radian_threshold = -pi / 6;
+    const int zero_right = 659;
+    const int zero_left = 0;
+    const int far_left_index = 164;  // scan_index_from_radian(pi/2);
+    const int far_right_index = 495; // scan_index_from_radian(-pi/2);
+    int left_index_threshold = scan_index_from_radian(left_radian_threshold);
+    int right_index_threshold = scan_index_from_radian(right_radian_threshold);
+
+    // My understanding is direction x = 0 degree. CCW is positive, CW is
+    // negative. Thus, left hand side of the robot is +90 degree, and right hand
+    // side of the robot is -90 degree
+
+    auto it_far_right =
+        std::next(request->laser_data.ranges.begin(), far_right_index);
+    auto it_far_left =
+        std::next(request->laser_data.ranges.begin(), far_left_index);
+    auto it_left =
+        std::next(request->laser_data.ranges.begin(), left_index_threshold);
+    auto it_right =
+        std::next(request->laser_data.ranges.begin(), right_index_threshold);
+    auto it_0_left = std::next(request->laser_data.ranges.begin(), zero_left);
+    auto it_0_right = std::next(request->laser_data.ranges.begin(), zero_right);
+
+    float sum_right = accumulate(it_far_right, it_right, 0);
+    float sum_left = accumulate(it_left, it_far_left, 0);
+    float sum_mid =
+        accumulate(it_0_left, it_left, 0) + accumulate(it_right, it_0_right, 0);
+
+    if (sum_left > sum_mid && sum_left > sum_right) {
+      response->direction = "left";
+    } else if (sum_mid > sum_left && sum_mid > sum_right) {
+      response->direction = "forward";
+    } else { // sum_right is the largest, then
+      response->direction = "right";
+    }
   }
 };
 

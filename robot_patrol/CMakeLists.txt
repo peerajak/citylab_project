@@ -40,6 +40,12 @@ rosidl_generate_interfaces(${PROJECT_NAME}
 rosidl_get_typesupport_target(cpp_typesupport_target
   ${PROJECT_NAME} rosidl_typesupport_cpp)
 
+add_executable(patrol_with_service_node src/patrol_with_service.cpp)
+target_link_libraries(patrol_with_service_node "${cpp_typesupport_target}")
+ament_target_dependencies(patrol_with_service_node
+rclcpp sensor_msgs geometry_msgs nav_msgs)
+
+
 add_executable(test_direction_service_node src/test_service.cpp)
 target_link_libraries(test_direction_service_node "${cpp_typesupport_target}")
 ament_target_dependencies(test_direction_service_node
@@ -65,6 +71,7 @@ install(TARGETS
    understand_laser_node
    test_direction_service_node
    direction_service_node
+   patrol_with_service_node 
    DESTINATION lib/${PROJECT_NAME}
  )
 
