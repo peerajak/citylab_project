@@ -13,6 +13,9 @@ find_package(rclcpp REQUIRED)
 find_package(sensor_msgs REQUIRED)
 find_package(geometry_msgs REQUIRED)
 find_package(nav_msgs REQUIRED)
+find_package(action_msgs REQUIRED)
+find_package(rclcpp_action REQUIRED)
+find_package(tf2 REQUIRED)
 find_package(rosidl_default_generators REQUIRED)
 
 
@@ -34,11 +37,22 @@ endif()
 
 rosidl_generate_interfaces(${PROJECT_NAME}
   "srv/GetDirection.srv"
+  "action/GoToPose.action"
    DEPENDENCIES sensor_msgs
 )
 
 rosidl_get_typesupport_target(cpp_typesupport_target
   ${PROJECT_NAME} rosidl_typesupport_cpp)
+
+add_executable(test_action_node src/test_action.cpp)
+target_link_libraries(test_action_node "${cpp_typesupport_target}")
+ament_target_dependencies(test_action_node
+rclcpp rclcpp_action geometry_msgs nav_msgs)
+
+add_executable(go_to_pose_action_node src/go_to_pose_action.cpp)
+target_link_libraries(go_to_pose_action_node "${cpp_typesupport_target}")
+ament_target_dependencies(go_to_pose_action_node
+rclcpp rclcpp_action geometry_msgs nav_msgs tf2)
 
 add_executable(patrol_with_service_node src/patrol_with_service.cpp)
 target_link_libraries(patrol_with_service_node "${cpp_typesupport_target}")
@@ -67,6 +81,8 @@ rclcpp sensor_msgs geometry_msgs nav_msgs)
 
 
 install(TARGETS
+   test_action_node
+   go_to_pose_action_node
    robot_patrol_node
    understand_laser_node
    test_direction_service_node

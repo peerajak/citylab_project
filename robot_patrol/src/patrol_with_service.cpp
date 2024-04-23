@@ -24,11 +24,8 @@ to
 using namespace std::chrono_literals;
 using std::placeholders::_1;
 using GetDirection = robot_patrol::srv::GetDirection;
+/* This is a service subscriber */
 
-// step 0. class band (min_radian, max_radian), get mean_radian
-// step 1. class band constructor for loop front_ranges and insert consecutive
-// radian into a band step 2. class band zoo insert only large enough band, keep
-// all bands in band_zoo class step 3. Choose largest band's mean radian.
 
 class Patrol : public rclcpp::Node {
 public:

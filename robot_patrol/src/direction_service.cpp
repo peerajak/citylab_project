@@ -8,7 +8,7 @@ using GetDirection = robot_patrol::srv::GetDirection;
 using std::placeholders::_1;
 using std::placeholders::_2;
 #define pi 3.14
-
+/* This is a service server */
 const float angle_increment = 0.00953;
 
 /*
