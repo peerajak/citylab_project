@@ -34,7 +34,16 @@ double yaw_theta_from_quaternion(float qx, float qy, float qz, float qw) {
 
 float theta_from_arctan(float x_target, float x_current, float y_target,
                         float y_current) {
-  return pi / 2 - std::atan((y_target - y_current) / (x_target - x_current));
+  // float atan_ans = std::atan((y_target - y_current) / (x_target -
+  // x_current));
+  float ret;
+  if (x_target < x_current && y_target < y_current)
+    ret = -pi / 2 - std::atan((x_target - x_current) / (y_target - y_current));
+  else if (x_target < x_current && y_target >= y_current)
+    ret = pi / 2 - std::atan((x_target - x_current) / (y_target - y_current));
+  else
+    ret = std::atan((y_target - y_current) / (x_target - x_current));
+  return ret;
 }
 
 class GoToPoseActionClient : public rclcpp::Node {
@@ -51,14 +60,18 @@ public:
         this->get_node_waitables_interface(), "go_to_pose");
 
     this->timer_ = this->create_wall_timer(
-        std::chrono::milliseconds(2000),
+        std::chrono::milliseconds(40000),
         std::bind(&GoToPoseActionClient::send_goal, this));
 
-    start_position.x = -0.1082;
-    start_position.y = 0.4973;
+    start_position.x = -0.068263;
+    start_position.y = 0.50008;
     start_position.theta = 0;
 
     current_pos_ = start_position;
+
+    corner_bottom_left.x = 0.737;
+    corner_bottom_left.y = 0.576;
+    corner_bottom_left.theta = -pi / 2;
 
     corner_bottom_right.x = 0.5977;
     corner_bottom_right.y = -0.7617;
@@ -68,14 +81,14 @@ public:
     corner_top_left.y = -0.3575;
     corner_top_left.theta = -pi / 2;
 
-    corner_top_right.x = -0.6478;
-    corner_top_right.y = 0.50866;
+    corner_top_right.x = -0.6576711;
+    corner_top_right.y = 0.5484223;
     corner_top_right.theta = -pi / 2;
 
-    // corner_goal_pose2d.push_back(corner_bottom_right);
-    // corner_goal_pose2d.push_back(corner_bottom_left);
+    corner_goal_pose2d.push_back(corner_bottom_left);
+    corner_goal_pose2d.push_back(corner_bottom_right);
     corner_goal_pose2d.push_back(corner_top_left);
-    // corner_goal_pose2d.push_back(corner_top_right);
+    corner_goal_pose2d.push_back(corner_top_right);
   }
 
   bool is_goal_done() const { return this->goal_done_; }
@@ -106,7 +119,8 @@ public:
         theta_from_arctan(goal_msg.goal_pos.x, current_pos_.x,
                           goal_msg.goal_pos.y, current_pos_.y);
 
-    RCLCPP_INFO(this->get_logger(), "Sending goal");
+    RCLCPP_INFO(this->get_logger(), "Sending goal x:%f y:%f",
+                goal_msg.goal_pos.x, goal_msg.goal_pos.y);
 
     auto send_goal_options = rclcpp_action::Client<GoToPose>::SendGoalOptions();
 

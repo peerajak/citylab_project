@@ -136,8 +136,19 @@ private:
 
   float theta_from_arctan(float x_target, float x_current, float y_target,
                           float y_current) {
-    return pi / 2 - std::atan((y_target - y_current) / (x_target - x_current));
+    // float atan_ans = std::atan((y_target - y_current) / (x_target -
+    // x_current));
+    float ret;
+    if (x_target < x_current && y_target < y_current)
+      ret =
+          -pi / 2 - std::atan((x_target - x_current) / (y_target - y_current));
+    else if (x_target < x_current && y_target >= y_current)
+      ret = pi / 2 - std::atan((x_target - x_current) / (y_target - y_current));
+    else
+      ret = std::atan((y_target - y_current) / (x_target - x_current));
+    return ret;
   }
+
   /*timer callback
   void timer1_callback() {
     RCLCPP_DEBUG(this->get_logger(), "Timer 1 Callback Start");
@@ -217,11 +228,18 @@ private:
         return;
       }
       ling.angular.z = target_yaw_rad_ - current_yaw_rad_;
+      if (std::abs(ling.angular.z ) >1)
+           ling.angular.z *= 0.1;
       move_robot(ling);
+      feedback->current_pos.x = current_pos_.x;
+      feedback->current_pos.y = current_pos_.y;
+      feedback->current_pos.theta = current_yaw_rad_;
       goal_handle->publish_feedback(feedback);
       RCLCPP_INFO(this->get_logger(),
-                  "Publish feedback current pos=['%f','%f','%f'",
-                  current_pos_.x, current_pos_.y, current_yaw_rad_);
+                  "Publish feedback current pos=['%f','%f'] target rad "
+                  "'%f',current rad %f, angular speed %f",
+                  current_pos_.x, current_pos_.y, target_yaw_rad_,
+                  current_yaw_rad_, ling.angular.z);
       loop_rate.sleep();
     }
 
