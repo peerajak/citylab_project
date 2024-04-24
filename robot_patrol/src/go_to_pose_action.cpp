@@ -17,6 +17,8 @@
 #include <nav_msgs/msg/odometry.hpp>
 #include <rclcpp/rclcpp.hpp>
 using namespace std::chrono_literals;
+
+#define pi 3.14
 /*
     This is the action server that subscribe to /odom topic and also move robot
     therefore, there are 3 main IOs
@@ -86,12 +88,11 @@ private:
   geometry_msgs::msg::Twist ling;
   geometry_msgs::msg::Point desire_pos_, current_pos_;
   geometry_msgs::msg::Quaternion desire_angle_, current_angle_;
-  double yaw_rad = 0., pitch_rad = 0., roll_rad = 0., req_yaw_rad = 0.,
-         target_yaw_rad = 0.;
+  double target_yaw_rad_, current_yaw_rad_;
 
   void move_robot(geometry_msgs::msg::Twist &msg) { publisher_->publish(msg); }
-  bool check_reached_goal_angle(float delta_error = 0.1) {
-    float delta_theta = std::abs(yaw_rad - target_yaw_rad);
+  bool check_reached_goal_angle(float delta_error = 0.3) {
+    float delta_theta = std::abs(current_yaw_rad_ - target_yaw_rad_);
     return delta_theta < delta_error; // IN GOAL return true else false;
   }
   bool check_reached_goal_pos(const geometry_msgs::msg::Point goal,
@@ -124,6 +125,19 @@ private:
 
     return result;
   }
+
+  double yaw_theta_from_quaternion(float qx, float qy, float qz, float qw) {
+    double roll_rad, pitch_rad, yaw_rad;
+    tf2::Quaternion odom_quat(qx, qy, qz, qw);
+    tf2::Matrix3x3 matrix_tf(odom_quat);
+    matrix_tf.getRPY(roll_rad, pitch_rad, yaw_rad);
+    return yaw_rad; // In radian
+  }
+
+  float theta_from_arctan(float x_target, float x_current, float y_target,
+                          float y_current) {
+    return pi / 2 - std::atan((y_target - y_current) / (x_target - x_current));
+  }
   /*timer callback
   void timer1_callback() {
     RCLCPP_DEBUG(this->get_logger(), "Timer 1 Callback Start");
@@ -133,15 +147,12 @@ private:
   void odom_callback(const nav_msgs::msg::Odometry::SharedPtr msg) {
     current_pos_ = msg->pose.pose.position;
     current_angle_ = msg->pose.pose.orientation;
-    tf2::Quaternion odom_quat(
+    current_yaw_rad_ = yaw_theta_from_quaternion(
         msg->pose.pose.orientation.x, msg->pose.pose.orientation.y,
         msg->pose.pose.orientation.z, msg->pose.pose.orientation.w);
 
-    tf2::Matrix3x3 matrix_tf(odom_quat);
-    matrix_tf.getRPY(roll_rad, pitch_rad, yaw_rad);
-
     RCLCPP_DEBUG(this->get_logger(), "current pos=['%f','%f','%f'",
-                 current_pos_.x, current_pos_.y, yaw_rad);
+                 current_pos_.x, current_pos_.y, current_yaw_rad_);
   }
 
   /* GoToPose Message
@@ -155,14 +166,17 @@ private:
   rclcpp_action::GoalResponse
   handle_goal(const rclcpp_action::GoalUUID &uuid,
               std::shared_ptr<const GoToPose::Goal> goal) {
-    RCLCPP_INFO(this->get_logger(),
-                "Received goal desire_position at x:%f y:%f", goal->goal_pos.x,
-                goal->goal_pos.y);
+
     // TODO
     //(void)uuid;
     desire_pos_.x = goal->goal_pos.x;
     desire_pos_.y = goal->goal_pos.y;
-    target_yaw_rad = goal->goal_pos.theta;
+    target_yaw_rad_ = theta_from_arctan(desire_pos_.x, current_pos_.x,
+                                        desire_pos_.y, current_pos_.y);
+    RCLCPP_INFO(
+        this->get_logger(),
+        "Received goal desire_position at x:%f y:%f, calculate theta %f",
+        goal->goal_pos.x, goal->goal_pos.y, target_yaw_rad_);
     return rclcpp_action::GoalResponse::ACCEPT_AND_EXECUTE;
   }
 
@@ -190,13 +204,26 @@ private:
     const auto goal = goal_handle->get_goal();
     auto feedback = std::make_shared<GoToPose::Feedback>();
 
-    auto &message = feedback->current_pos;
-    message.x = 0;
-    message.y = 0;
-    message.theta = 0;
+    // auto &message = feedback->current_pos;
     auto result = std::make_shared<GoToPose::Result>();
     auto move = geometry_msgs::msg::Twist();
     rclcpp::Rate loop_rate(1);
+
+    while (!check_reached_goal_angle() && rclcpp::ok()) {
+      if (goal_handle->is_canceling()) {
+        result->status = false; // message;
+        goal_handle->canceled(result);
+        RCLCPP_INFO(this->get_logger(), "Goal canceled");
+        return;
+      }
+      ling.angular.z = target_yaw_rad_ - current_yaw_rad_;
+      move_robot(ling);
+      goal_handle->publish_feedback(feedback);
+      RCLCPP_INFO(this->get_logger(),
+                  "Publish feedback current pos=['%f','%f','%f'",
+                  current_pos_.x, current_pos_.y, current_yaw_rad_);
+      loop_rate.sleep();
+    }
 
     while (!check_reached_goal_pos(desire_pos_, current_pos_, 0.1) &&
            rclcpp::ok()) {
@@ -210,29 +237,26 @@ private:
       }
       // Move robot forward and send feedback
       // message = "Moving forward...";
-
-      ling.linear.x = 0.2; // TODO move robot logic here
+      target_yaw_rad_ = theta_from_arctan(desire_pos_.x, current_pos_.x,
+                                          desire_pos_.y, current_pos_.y);
+      ling.linear.x = 0.1; // TODO move robot logic here
+      ling.angular.z = target_yaw_rad_ - current_yaw_rad_;
 
       move_robot(ling);
+      feedback->current_pos.x = current_pos_.x;
+      feedback->current_pos.y = current_pos_.y;
+      feedback->current_pos.theta = current_yaw_rad_;
       goal_handle->publish_feedback(feedback);
-      RCLCPP_INFO(this->get_logger(), "Publish feedback");
+      RCLCPP_INFO(this->get_logger(),
+                  "Publish feedback current pos=['%f','%f'] target rad "
+                  "'%f',current rad %f, angular speed %f",
+                  current_pos_.x, current_pos_.y, target_yaw_rad_,
+                  current_yaw_rad_, ling.angular.z);
 
       loop_rate.sleep();
     }
+
     ling.linear.x = 0;
-    while (!check_reached_goal_angle() && rclcpp::ok()) {
-      if (goal_handle->is_canceling()) {
-        result->status = false; // message;
-        goal_handle->canceled(result);
-        RCLCPP_INFO(this->get_logger(), "Goal canceled");
-        return;
-      }
-      ling.angular.z = -0.05;
-      move_robot(ling);
-      goal_handle->publish_feedback(feedback);
-      RCLCPP_INFO(this->get_logger(), "Publish feedback");
-      loop_rate.sleep();
-    }
     ling.angular.z = 0;
     // Check if goal is done
     if (rclcpp::ok()) {

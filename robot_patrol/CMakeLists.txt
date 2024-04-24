@@ -47,7 +47,7 @@ rosidl_get_typesupport_target(cpp_typesupport_target
 add_executable(test_action_node src/test_action.cpp)
 target_link_libraries(test_action_node "${cpp_typesupport_target}")
 ament_target_dependencies(test_action_node
-rclcpp rclcpp_action geometry_msgs nav_msgs)
+rclcpp rclcpp_action geometry_msgs nav_msgs tf2)
 
 add_executable(go_to_pose_action_node src/go_to_pose_action.cpp)
 target_link_libraries(go_to_pose_action_node "${cpp_typesupport_target}")

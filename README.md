@@ -1,3 +1,19 @@
+# Checkpoint 6. ROS2 Basic C++
+## Current Status.
+Now I can move the robot using action server, action client.
+Todo:
+1. Given Point A, theta A as a current position, and Point B and theta B is target position,
+prove that robot can move from point A to point B, with constant speed, and change its angular velocity to match B's requirement.
+This "Path" can be straight line, or curve.
+
+2. Make 4 corners the target position, and give the robot the start position (x0,y0, theta0)
+
+## But How can I do 1)?
+
+- We need to rotate the robot to the direction we wish robot to move(Currently here.)
+
+
+
 # Checkpoint 5 ROS2 Basic C++
 ## Current Status
 Done 2 real robot sessions.

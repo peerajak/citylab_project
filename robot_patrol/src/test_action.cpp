@@ -3,8 +3,12 @@
 #include "geometry_msgs/msg/detail/twist__struct.hpp"
 #include "nav_msgs/msg/detail/odometry__struct.hpp"
 #include "rclcpp/rclcpp.hpp"
+#include "rclcpp/utilities.hpp"
 #include "rclcpp_action/rclcpp_action.hpp"
 #include "robot_patrol/action/go_to_pose.hpp"
+#include "tf2/LinearMath/Matrix3x3.h"
+#include "tf2/LinearMath/Quaternion.h"
+#include "tf2/LinearMath/Vector3.h"
 #include <geometry_msgs/msg/point.h>
 #include <inttypes.h>
 #include <iostream>
@@ -16,8 +20,22 @@
 //#include "geometry_msgs/Point.h"
 #include "geometry_msgs/msg/quaternion.hpp"
 #include "geometry_msgs/msg/twist.hpp"
+#include <cmath>
 
 #define pi 3.14
+
+double yaw_theta_from_quaternion(float qx, float qy, float qz, float qw) {
+  double roll_rad, pitch_rad, yaw_rad;
+  tf2::Quaternion odom_quat(qx, qy, qz, qw);
+  tf2::Matrix3x3 matrix_tf(odom_quat);
+  matrix_tf.getRPY(roll_rad, pitch_rad, yaw_rad);
+  return yaw_rad; // In radian
+};
+
+float theta_from_arctan(float x_target, float x_current, float y_target,
+                        float y_current) {
+  return pi / 2 - std::atan((y_target - y_current) / (x_target - x_current));
+}
 
 class GoToPoseActionClient : public rclcpp::Node {
 public:
@@ -33,28 +51,31 @@ public:
         this->get_node_waitables_interface(), "go_to_pose");
 
     this->timer_ = this->create_wall_timer(
-        std::chrono::milliseconds(20000),
+        std::chrono::milliseconds(2000),
         std::bind(&GoToPoseActionClient::send_goal, this));
-    corner_bottom_right.x = 0.5;
-    corner_bottom_right.y = 0.5;
-    corner_bottom_right.theta = pi / 2;
 
-    corner_bottom_left.x = 0.2;
-    corner_bottom_left.y = 0.5;
-    corner_bottom_left.theta = pi / 2;
+    start_position.x = -0.1082;
+    start_position.y = 0.4973;
+    start_position.theta = 0;
 
-    corner_top_left.x = 0.2;
-    corner_top_left.y = 0.2;
-    corner_top_left.theta = pi / 2;
+    current_pos_ = start_position;
 
-    corner_top_right.x = 0.2;
-    corner_top_right.y = 0.5;
-    corner_top_right.theta = pi / 2;
+    corner_bottom_right.x = 0.5977;
+    corner_bottom_right.y = -0.7617;
+    corner_bottom_right.theta = -pi / 2;
 
-    corner_goal_pose2d.push_back(corner_bottom_right);
-    corner_goal_pose2d.push_back(corner_bottom_left);
+    corner_top_left.x = -0.73;
+    corner_top_left.y = -0.3575;
+    corner_top_left.theta = -pi / 2;
+
+    corner_top_right.x = -0.6478;
+    corner_top_right.y = 0.50866;
+    corner_top_right.theta = -pi / 2;
+
+    // corner_goal_pose2d.push_back(corner_bottom_right);
+    // corner_goal_pose2d.push_back(corner_bottom_left);
     corner_goal_pose2d.push_back(corner_top_left);
-    corner_goal_pose2d.push_back(corner_top_right);
+    // corner_goal_pose2d.push_back(corner_top_right);
   }
 
   bool is_goal_done() const { return this->goal_done_; }
@@ -81,7 +102,9 @@ public:
 
     goal_msg.goal_pos.x = corner_goal_pose2d[0].x;
     goal_msg.goal_pos.y = corner_goal_pose2d[0].y;
-    goal_msg.goal_pos.theta = corner_goal_pose2d[0].theta;
+    goal_msg.goal_pos.theta =
+        theta_from_arctan(goal_msg.goal_pos.x, current_pos_.x,
+                          goal_msg.goal_pos.y, current_pos_.y);
 
     RCLCPP_INFO(this->get_logger(), "Sending goal");
 
@@ -107,10 +130,12 @@ private:
   rclcpp::TimerBase::SharedPtr timer_;
   bool goal_done_;
   std::vector<geometry_msgs::msg::Pose2D> corner_goal_pose2d;
-  geometry_msgs::msg::Pose2D corner_bottom_right; //{1., 1., pi / 2};
-  geometry_msgs::msg::Pose2D corner_bottom_left;  //(0, 1, pi / 2);
-  geometry_msgs::msg::Pose2D corner_top_left;     //(0, 0, pi / 2);
-  geometry_msgs::msg::Pose2D corner_top_right;    //(0, 1, pi / 2);
+  geometry_msgs::msg::Pose2D start_position;
+  geometry_msgs::msg::Pose2D corner_bottom_right;
+  geometry_msgs::msg::Pose2D corner_bottom_left;
+  geometry_msgs::msg::Pose2D corner_top_left;
+  geometry_msgs::msg::Pose2D corner_top_right;
+  geometry_msgs::msg::Pose2D current_pos_;
 
   void goal_response_callback(const GoalHandlePose::SharedPtr &goal_handle) {
     if (!goal_handle) {
@@ -124,13 +149,23 @@ private:
   void feedback_callback(
       GoalHandlePose::SharedPtr,
       const std::shared_ptr<const GoalHandlePose::Feedback> feedback) {
-    RCLCPP_INFO(this->get_logger(), "Feedback received:");
+
+    RCLCPP_INFO(this->get_logger(), "Feedback received: x %f, y %f, theta %f",
+                feedback->current_pos.x, feedback->current_pos.y,
+                feedback->current_pos.theta);
+    current_pos_.x = feedback->current_pos.x;
+    current_pos_.y = feedback->current_pos.y;
+    current_pos_.theta = feedback->current_pos.theta;
   }
 
   void result_callback(const GoalHandlePose::WrappedResult &result) {
     this->goal_done_ = true;
     switch (result.code) {
+
     case rclcpp_action::ResultCode::SUCCEEDED:
+      RCLCPP_ERROR(this->get_logger(), "Goal was success? %s",
+                   result.result->status ? "yes" : "no");
+
       break;
     case rclcpp_action::ResultCode::ABORTED:
       RCLCPP_ERROR(this->get_logger(), "Goal was aborted");
@@ -154,7 +189,7 @@ int main(int argc, char **argv) {
   rclcpp::executors::MultiThreadedExecutor executor;
   executor.add_node(action_client);
 
-  while (!action_client->is_goal_done()) {
+  while (!action_client->is_goal_done() || rclcpp::ok()) {
     executor.spin_some();
   }
 
