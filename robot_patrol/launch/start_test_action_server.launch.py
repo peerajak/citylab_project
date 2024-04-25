@@ -7,8 +7,4 @@ def generate_launch_description():
             package='robot_patrol',
             executable='go_to_pose_action_node',
             output='screen'),
-                Node(
-            package='robot_patrol',
-            executable='test_action_node',
-            output='screen'),
     ])

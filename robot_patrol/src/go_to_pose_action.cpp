@@ -42,7 +42,10 @@ using namespace std::chrono_literals;
         2. execute() is being done in a new detached thread. Thus might now slow
             down the main thread.
 */
-
+float radian_difference(float first, float second) {
+  return std::abs(first - second) <= pi ? first - second
+                                        : (first - second) - 2 * pi;
+}
 class GoToPoseActionServer : public rclcpp::Node {
 public:
   using GoToPose = robot_patrol::action::GoToPose;
@@ -227,9 +230,12 @@ private:
         RCLCPP_INFO(this->get_logger(), "Goal canceled");
         return;
       }
-      ling.angular.z = target_yaw_rad_ - current_yaw_rad_;
-      if (std::abs(ling.angular.z ) >1)
-           ling.angular.z *= 0.1;
+      float angular_z_raw =
+          radian_difference(target_yaw_rad_, current_yaw_rad_);
+      ling.angular.z =
+          angular_z_raw < 1.5 ? angular_z_raw : 0.5 * angular_z_raw;
+      // if (std::abs(ling.angular.z ) >1)
+      //      ling.angular.z *= 0.1;
       move_robot(ling);
       feedback->current_pos.x = current_pos_.x;
       feedback->current_pos.y = current_pos_.y;
@@ -257,8 +263,11 @@ private:
       // message = "Moving forward...";
       target_yaw_rad_ = theta_from_arctan(desire_pos_.x, current_pos_.x,
                                           desire_pos_.y, current_pos_.y);
-      ling.linear.x = 0.1; // TODO move robot logic here
-      ling.angular.z = target_yaw_rad_ - current_yaw_rad_;
+      ling.linear.x = 0.2; // TODO move robot logic here
+      float angular_z_raw =
+          radian_difference(target_yaw_rad_, current_yaw_rad_);
+      ling.angular.z =
+          angular_z_raw < 1.5 ? angular_z_raw : 0.5 * angular_z_raw;
 
       move_robot(ling);
       feedback->current_pos.x = current_pos_.x;
@@ -274,14 +283,14 @@ private:
       loop_rate.sleep();
     }
 
-    ling.linear.x = 0;
-    ling.angular.z = 0;
-    // Check if goal is done
+    // ling.linear.x = 0;
+    // ling.angular.z = 0;
+    //  Check if goal is done
     if (rclcpp::ok()) {
 
       result->status = true;
-      ling.linear.x = 0;
-      ling.angular.z = 0;
+      // ling.linear.x = 0;
+      // ling.angular.z = 0;
       move_robot(ling);
       goal_handle->succeed(result);
       RCLCPP_INFO(this->get_logger(), "Goal succeeded");

@@ -24,6 +24,8 @@
 
 #define pi 3.14
 
+int action_counter = 0;
+
 double yaw_theta_from_quaternion(float qx, float qy, float qz, float qw) {
   double roll_rad, pitch_rad, yaw_rad;
   tf2::Quaternion odom_quat(qx, qy, qz, qw);
@@ -60,7 +62,7 @@ public:
         this->get_node_waitables_interface(), "go_to_pose");
 
     this->timer_ = this->create_wall_timer(
-        std::chrono::milliseconds(40000),
+        std::chrono::milliseconds(0),
         std::bind(&GoToPoseActionClient::send_goal, this));
 
     start_position.x = -0.068263;
@@ -73,22 +75,26 @@ public:
     corner_bottom_left.y = 0.576;
     corner_bottom_left.theta = -pi / 2;
 
-    corner_bottom_right.x = 0.5977;
-    corner_bottom_right.y = -0.7617;
+    corner_bottom_right.x = 0.88435;
+    corner_bottom_right.y = -0.57935;
     corner_bottom_right.theta = -pi / 2;
 
-    corner_top_left.x = -0.73;
-    corner_top_left.y = -0.3575;
+    corner_top_left.x = -0.53170;
+    corner_top_left.y = -0.47636;
     corner_top_left.theta = -pi / 2;
 
-    corner_top_right.x = -0.6576711;
-    corner_top_right.y = 0.5484223;
+    corner_top_right.x = -0.55024;
+    corner_top_right.y = 0.381047;
     corner_top_right.theta = -pi / 2;
 
     corner_goal_pose2d.push_back(corner_bottom_left);
     corner_goal_pose2d.push_back(corner_bottom_right);
     corner_goal_pose2d.push_back(corner_top_left);
     corner_goal_pose2d.push_back(corner_top_right);
+    for (int i = 0; i < action_counter; i++) {
+      std::rotate(corner_goal_pose2d.begin(), corner_goal_pose2d.begin() + 1,
+                  corner_goal_pose2d.end());
+    }
   }
 
   bool is_goal_done() const { return this->goal_done_; }
@@ -96,7 +102,7 @@ public:
   void send_goal() {
     using namespace std::placeholders;
 
-    // this->timer_->cancel();
+    this->timer_->cancel();
 
     this->goal_done_ = false;
 
@@ -135,8 +141,6 @@ public:
 
     auto goal_handle_future =
         this->client_ptr_->async_send_goal(goal_msg, send_goal_options);
-    std::rotate(corner_goal_pose2d.begin(), corner_goal_pose2d.begin() + 1,
-                corner_goal_pose2d.end());
   }
 
 private:
@@ -198,15 +202,18 @@ private:
 
 int main(int argc, char **argv) {
   rclcpp::init(argc, argv);
-  auto action_client = std::make_shared<GoToPoseActionClient>();
 
   rclcpp::executors::MultiThreadedExecutor executor;
-  executor.add_node(action_client);
 
-  while (!action_client->is_goal_done() || rclcpp::ok()) {
-    executor.spin_some();
+  while (rclcpp::ok()) {
+    auto action_client = std::make_shared<GoToPoseActionClient>();
+    executor.add_node(action_client);
+    while (!action_client->is_goal_done()) {
+      executor.spin_some();
+    }
+    executor.remove_node(action_client);
+    action_counter++;
   }
-
   rclcpp::shutdown();
   return 0;
 }
