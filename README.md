@@ -1,16 +1,32 @@
 # Checkpoint 6. ROS2 Basic C++
-## Current Status.
-Now I can move the robot using action server, action client.
-Todo:
-1. Given Point A, theta A as a current position, and Point B and theta B is target position,
-prove that robot can move from point A to point B, with constant speed, and change its angular velocity to match B's requirement.
-This "Path" can be straight line, or curve.
 
-2. Make 4 corners the target position, and give the robot the start position (x0,y0, theta0)
+## Task 1
 
-## But How can I do 1)?
+In this section, you will create a ROS Service that tells the robot what to do. This will replace the obstace avoidance algorithm you created in Checkpoint 5.
 
-- We need to rotate the robot to the direction we wish robot to move(Currently here.)
+The goal in this section is to create a ROS Service that, when called:
+
+- It receives the laser data captured by the sensor
+- It analyzes the laser data received
+Based on this data, it tells the robot what to do next
+To accomplish this, you will have to do 3 things:
+
+Create a service server node that, when called, will analyze the laser data and tell the robot where to move next
+Modify the program from Checkpoint 5 (patrol.cpp) so that it includes now a service client that calls the service server before sending velocities to the robot
+Create a new launch file to launch both nodes: the service server node and the patrol node.
+
+## Task 2
+
+Create an action server to send position goals to the robot¶
+The goal of this section is to create an action server that allows you to send the robot to a certain position, so we can later use it to manually navigate the the robot around the environment.
+
+To achieve that, you will need to create another node that contains an action server in charge of doing the necessary operations.
+
+/odom
+
+x: x coordinate (in meters)
+y: y coordinate (in meters)
+theta: goal orientation (in degrees)
 
 
 
