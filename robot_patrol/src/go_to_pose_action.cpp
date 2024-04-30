@@ -18,6 +18,8 @@
 #include <rclcpp/rclcpp.hpp>
 using namespace std::chrono_literals;
 
+//#define AUTO_CALCULATE_ANGLE
+
 #define pi 3.14
 /*
     This is the action server that subscribe to /odom topic and also move robot
@@ -185,8 +187,13 @@ private:
     //(void)uuid;
     desire_pos_.x = goal->goal_pos.x;
     desire_pos_.y = goal->goal_pos.y;
+
+#ifdef AUTO_CALCULATE_ANGLE
     target_yaw_rad_ = theta_from_arctan(desire_pos_.x, current_pos_.x,
                                         desire_pos_.y, current_pos_.y);
+#else
+    target_yaw_rad_ = goal->goal_pos.theta;
+#endif
     RCLCPP_INFO(
         this->get_logger(),
         "Received goal desire_position at x:%f y:%f, calculate theta %f",
@@ -259,10 +266,12 @@ private:
         RCLCPP_INFO(this->get_logger(), "Goal canceled");
         return;
       }
-      // Move robot forward and send feedback
-      // message = "Moving forward...";
+// Move robot forward and send feedback
+// message = "Moving forward...";
+#ifdef AUTO_CALCULATE_ANGLE
       target_yaw_rad_ = theta_from_arctan(desire_pos_.x, current_pos_.x,
                                           desire_pos_.y, current_pos_.y);
+#endif
       ling.linear.x = 0.2; // TODO move robot logic here
       float angular_z_raw =
           radian_difference(target_yaw_rad_, current_yaw_rad_);
@@ -289,8 +298,11 @@ private:
     if (rclcpp::ok()) {
 
       result->status = true;
-      // ling.linear.x = 0;
-      // ling.angular.z = 0;
+#ifndef AUTO_CALCULATE_ANGLE
+      ling.linear.x = 0;
+      ling.angular.z = 0;
+#endif
+
       move_robot(ling);
       goal_handle->succeed(result);
       RCLCPP_INFO(this->get_logger(), "Goal succeeded");
