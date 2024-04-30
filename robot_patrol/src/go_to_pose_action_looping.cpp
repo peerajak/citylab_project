@@ -102,7 +102,7 @@ private:
   }
   bool check_reached_goal_pos(const geometry_msgs::msg::Point goal,
                               const geometry_msgs::msg::Point current_pos,
-                              float delta_error = 0.1) {
+                              float delta_error = 0.15) {
 
     // print_2Dposition(goal, "GOAL");
     // print_2Dposition(current_pos, "CURRENT_POS");
@@ -270,12 +270,12 @@ private:
         RCLCPP_INFO(this->get_logger(), "Goal canceled");
         return;
       }
-      // Move robot forward and send feedback
-      // message = "Moving forward...";
-      //#ifdef AUTO_CALCULATE_ANGLE
+// Move robot forward and send feedback
+// message = "Moving forward...";
+#ifdef AUTO_CALCULATE_ANGLE
       target_yaw_rad_ = theta_from_arctan(desire_pos_.x, current_pos_.x,
                                           desire_pos_.y, current_pos_.y);
-      //#endif
+#endif
       ling.linear.x = 0.2; // TODO move robot logic here
       float angular_z_raw =
           radian_difference(target_yaw_rad_, current_yaw_rad_);

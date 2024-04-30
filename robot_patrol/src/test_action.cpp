@@ -67,26 +67,29 @@ public:
 
     start_position.x = -0.068263;
     start_position.y = 0.50008;
-    start_position.theta = 0;
-
-    current_pos_ = start_position;
+    // start_position.theta = theta_from_arctan(0.737, -0.068263, 0.576,
+    // 0.50008);
 
     corner_bottom_left.x = 0.737;
     corner_bottom_left.y = 0.576;
-    corner_bottom_left.theta = -pi / 2;
+    // corner_bottom_left.theta = theta_from_arctan(0.88435, 0.737, -0.57935,
+    // 0.576);
 
     corner_bottom_right.x = 0.88435;
     corner_bottom_right.y = -0.57935;
-    corner_bottom_right.theta = -pi / 2;
+    // corner_bottom_right.theta =  theta_from_arctan(-0.53170, 0.88435,
+    // -0.47636, -0.57935);
 
     corner_top_left.x = -0.53170;
     corner_top_left.y = -0.47636;
-    corner_top_left.theta = -pi / 2;
+    // corner_top_left.theta =
+    // theta_from_arctan(-0.55024, -0.53170, 0.381047, -0.47636);
 
-    corner_top_right.x = -0.55024;
-    corner_top_right.y = 0.381047;
-    corner_top_right.theta = -pi / 2;
-
+    corner_top_right.x = -0.63024;
+    corner_top_right.y = 0.5;
+    // corner_top_right.theta =
+    // theta_from_arctan(0.737, -0.55024, 0.50008, 0.381047);
+    corner_goal_pose2d.push_back(start_position);
     corner_goal_pose2d.push_back(corner_bottom_left);
     corner_goal_pose2d.push_back(corner_bottom_right);
     corner_goal_pose2d.push_back(corner_top_left);
@@ -95,6 +98,8 @@ public:
       std::rotate(corner_goal_pose2d.begin(), corner_goal_pose2d.begin() + 1,
                   corner_goal_pose2d.end());
     }
+    current_pos_.x = corner_goal_pose2d.back().x;
+    current_pos_.y = corner_goal_pose2d.back().y;
   }
 
   bool is_goal_done() const { return this->goal_done_; }
@@ -121,12 +126,14 @@ public:
 
     goal_msg.goal_pos.x = corner_goal_pose2d[0].x;
     goal_msg.goal_pos.y = corner_goal_pose2d[0].y;
+
     goal_msg.goal_pos.theta =
         theta_from_arctan(goal_msg.goal_pos.x, current_pos_.x,
                           goal_msg.goal_pos.y, current_pos_.y);
 
-    RCLCPP_INFO(this->get_logger(), "Sending goal x:%f y:%f",
-                goal_msg.goal_pos.x, goal_msg.goal_pos.y);
+    RCLCPP_INFO(this->get_logger(), "Sending goal x:%f y:%f theta %f",
+                goal_msg.goal_pos.x, goal_msg.goal_pos.y,
+                goal_msg.goal_pos.theta);
 
     auto send_goal_options = rclcpp_action::Client<GoToPose>::SendGoalOptions();
 

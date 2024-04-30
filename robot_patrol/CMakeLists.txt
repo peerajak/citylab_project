@@ -54,6 +54,12 @@ target_link_libraries(go_to_pose_action_node "${cpp_typesupport_target}")
 ament_target_dependencies(go_to_pose_action_node
 rclcpp rclcpp_action geometry_msgs nav_msgs tf2)
 
+add_executable(go_to_pose_action_looping_node src/go_to_pose_action_looping.cpp)
+target_link_libraries(go_to_pose_action_looping_node "${cpp_typesupport_target}")
+ament_target_dependencies(go_to_pose_action_looping_node
+rclcpp rclcpp_action geometry_msgs nav_msgs tf2)
+
+
 add_executable(patrol_with_service_node src/patrol_with_service.cpp)
 target_link_libraries(patrol_with_service_node "${cpp_typesupport_target}")
 ament_target_dependencies(patrol_with_service_node
@@ -83,6 +89,7 @@ rclcpp sensor_msgs geometry_msgs nav_msgs)
 install(TARGETS
    test_action_node
    go_to_pose_action_node
+   go_to_pose_action_looping_node
    robot_patrol_node
    understand_laser_node
    test_direction_service_node
