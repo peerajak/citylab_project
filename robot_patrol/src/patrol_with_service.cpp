@@ -105,7 +105,7 @@ private:
       } else if (direction_from_service == "forward") {
         ling.angular.z = 0.0;
         ling.linear.x = 0.1;
-      } else { // direction_from_service == "right"
+      } else  if (direction_from_service == "right") { 
         ling.angular.z = -0.5;
         ling.linear.x = 0.1;
       }
