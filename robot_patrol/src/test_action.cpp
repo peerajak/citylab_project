@@ -95,7 +95,7 @@ public:
     corner_goal_pose2d.push_back(corner_top_left);
     corner_goal_pose2d.push_back(corner_top_right);
     for (int i = 0; i < action_counter; i++) {
-      std::rotate(corner_goal_pose2d.begin(), corner_goal_pose2d.begin() + 1,
+      std::rotate(corner_goal_pose2d.begin(), corner_goal_pose2d.begin() +1,
                   corner_goal_pose2d.end());
     }
     current_pos_.x = corner_goal_pose2d.back().x;
@@ -127,9 +127,9 @@ public:
     goal_msg.goal_pos.x = corner_goal_pose2d[0].x;
     goal_msg.goal_pos.y = corner_goal_pose2d[0].y;
 
-    goal_msg.goal_pos.theta =
-        theta_from_arctan(goal_msg.goal_pos.x, current_pos_.x,
-                          goal_msg.goal_pos.y, current_pos_.y);
+    goal_msg.goal_pos.theta = 1.5;
+       // theta_from_arctan(goal_msg.goal_pos.x, current_pos_.x,
+       //                   goal_msg.goal_pos.y, current_pos_.y);
 
     RCLCPP_INFO(this->get_logger(), "Sending goal x:%f y:%f theta %f",
                 goal_msg.goal_pos.x, goal_msg.goal_pos.y,

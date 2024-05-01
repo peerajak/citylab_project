@@ -18,8 +18,6 @@
 #include <rclcpp/rclcpp.hpp>
 using namespace std::chrono_literals;
 
-//#define AUTO_CALCULATE_ANGLE
-
 #define pi 3.14
 /*
     This is the action server that subscribe to /odom topic and also move robot
@@ -92,17 +90,22 @@ private:
   rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr subscription1_;
   geometry_msgs::msg::Twist ling;
   geometry_msgs::msg::Point desire_pos_, current_pos_;
+  float desire_pos_angle;
   geometry_msgs::msg::Quaternion desire_angle_, current_angle_;
   double target_yaw_rad_, current_yaw_rad_;
 
   void move_robot(geometry_msgs::msg::Twist &msg) { publisher_->publish(msg); }
-  bool check_reached_goal_angle(float delta_error = 0.01) {
-    float delta_theta = std::abs(current_yaw_rad_ - target_yaw_rad_);
+  bool check_reached_goal_position_angle(float delta_error = 0.01) {
+    float delta_theta = radian_difference(target_yaw_rad_, current_yaw_rad_);
+    return delta_theta < delta_error; // IN GOAL return true else false;
+  }
+    bool check_reached_goal_desire_angle(float delta_error = 0.01) {
+    float delta_theta =  radian_difference(desire_pos_angle, current_yaw_rad_);
     return delta_theta < delta_error; // IN GOAL return true else false;
   }
   bool check_reached_goal_pos(const geometry_msgs::msg::Point goal,
                               const geometry_msgs::msg::Point current_pos,
-                              float delta_error = 0.15) {
+                              float delta_error = 0.1) {
 
     // print_2Dposition(goal, "GOAL");
     // print_2Dposition(current_pos, "CURRENT_POS");
@@ -187,13 +190,11 @@ private:
     //(void)uuid;
     desire_pos_.x = goal->goal_pos.x;
     desire_pos_.y = goal->goal_pos.y;
+    desire_pos_angle = goal->goal_pos.theta;
 
-#ifdef AUTO_CALCULATE_ANGLE
     target_yaw_rad_ = theta_from_arctan(desire_pos_.x, current_pos_.x,
                                         desire_pos_.y, current_pos_.y);
-#else
-    target_yaw_rad_ = goal->goal_pos.theta;
-#endif
+
     RCLCPP_INFO(
         this->get_logger(),
         "Received goal desire_position at x:%f y:%f, calculate theta %f",
@@ -230,7 +231,7 @@ private:
     auto move = geometry_msgs::msg::Twist();
     rclcpp::Rate loop_rate(1);
 
-    while (!check_reached_goal_angle() && rclcpp::ok()) {
+    while (!check_reached_goal_position_angle() && rclcpp::ok()) {
       if (goal_handle->is_canceling()) {
         result->status = false; // message;
         goal_handle->canceled(result);
@@ -239,9 +240,8 @@ private:
       }
       float angular_z_raw =
           radian_difference(target_yaw_rad_, current_yaw_rad_);
-#ifndef AUTO_CALCULATE_ANGLE
+
       ling.linear.x = 0.0;
-#endif
       ling.angular.z =
           angular_z_raw < 1.5 ? angular_z_raw : 0.5 * angular_z_raw;
       // if (std::abs(ling.angular.z ) >1)
@@ -270,12 +270,12 @@ private:
         RCLCPP_INFO(this->get_logger(), "Goal canceled");
         return;
       }
-// Move robot forward and send feedback
-// message = "Moving forward...";
-#ifdef AUTO_CALCULATE_ANGLE
+      // Move robot forward and send feedback
+      // message = "Moving forward...";
+
       target_yaw_rad_ = theta_from_arctan(desire_pos_.x, current_pos_.x,
                                           desire_pos_.y, current_pos_.y);
-#endif
+
       ling.linear.x = 0.2; // TODO move robot logic here
       float angular_z_raw =
           radian_difference(target_yaw_rad_, current_yaw_rad_);
@@ -296,17 +296,42 @@ private:
       loop_rate.sleep();
     }
 
+    while (!check_reached_goal_desire_angle() && rclcpp::ok()) {
+      if (goal_handle->is_canceling()) {
+        result->status = false; // message;
+        goal_handle->canceled(result);
+        RCLCPP_INFO(this->get_logger(), "Goal canceled");
+        return;
+      }
+      float angular_z_raw =
+          radian_difference(desire_pos_angle, current_yaw_rad_);
+
+      ling.linear.x = 0.0;
+      ling.angular.z =
+          angular_z_raw < 1.5 ? angular_z_raw : 0.5 * angular_z_raw;
+      // if (std::abs(ling.angular.z ) >1)
+      //      ling.angular.z *= 0.1;
+      move_robot(ling);
+      feedback->current_pos.x = current_pos_.x;
+      feedback->current_pos.y = current_pos_.y;
+      feedback->current_pos.theta = current_yaw_rad_;
+      goal_handle->publish_feedback(feedback);
+      RCLCPP_INFO(
+          this->get_logger(),
+          "Publish rotating to desire angle feedback current pos=['%f','%f'] target rad "
+          "'%f',current rad %f, angular speed %f",
+          current_pos_.x, current_pos_.y, target_yaw_rad_, current_yaw_rad_,
+          ling.angular.z);
+      loop_rate.sleep();
+    }
     // ling.linear.x = 0;
     // ling.angular.z = 0;
     //  Check if goal is done
     if (rclcpp::ok()) {
 
       result->status = true;
-#ifndef AUTO_CALCULATE_ANGLE
       ling.linear.x = 0;
       ling.angular.z = 0;
-#endif
-
       move_robot(ling);
       goal_handle->succeed(result);
       RCLCPP_INFO(this->get_logger(), "Goal succeeded");

@@ -3,6 +3,7 @@
 #include "robot_patrol/srv/get_direction.hpp"
 #include <cassert>
 #include <memory>
+#include <algorithm>
 
 using GetDirection = robot_patrol::srv::GetDirection;
 using std::placeholders::_1;
@@ -65,6 +66,7 @@ private:
                    const std::shared_ptr<GetDirection::Response> response) {
     RCLCPP_INFO(this->get_logger(), "laser frame id %s",
                 request->laser_data.header.frame_id.c_str());
+    float max_interest_far = 0.7;
     /*
         float left_radian_threshold = pi / 6;
         float right_radian_threshold = -pi / 6;
@@ -111,16 +113,16 @@ private:
     float sum_left = 0, sum_mid = 0, sum_right = 0;
 
     for (int i = 0; i <= 54; i++) {
-      sum_mid += request->laser_data.ranges[i];
+      sum_mid += std::min(request->laser_data.ranges[i], max_interest_far);
     }
     for (int i = 605; i <= 659; i++) {
-      sum_mid += request->laser_data.ranges[i];
+      sum_mid += std::min(request->laser_data.ranges[i], max_interest_far);
     }
     for (int i = 55; i <= 164; i++) {
-      sum_left += request->laser_data.ranges[i];
+      sum_left += std::min(request->laser_data.ranges[i], max_interest_far);
     }
     for (int i = 495; i <= 604; i++) {
-      sum_right += request->laser_data.ranges[i];
+      sum_right += std::min(request->laser_data.ranges[i], max_interest_far);
     }
 
     if (sum_left > sum_mid && sum_left > sum_right) {
