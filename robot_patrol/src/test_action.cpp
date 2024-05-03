@@ -26,6 +26,9 @@
 
 int action_counter = 0;
 
+float degree_to_radian(float degree) { return degree / 180 * pi; }
+float radian_to_degree(float rad) { return rad / pi * 180; }
+
 double yaw_theta_from_quaternion(float qx, float qy, float qz, float qw) {
   double roll_rad, pitch_rad, yaw_rad;
   tf2::Quaternion odom_quat(qx, qy, qz, qw);
@@ -127,11 +130,11 @@ public:
     goal_msg.goal_pos.x = corner_goal_pose2d[0].x;
     goal_msg.goal_pos.y = corner_goal_pose2d[0].y;
 
-    goal_msg.goal_pos.theta = 1.5;
+    goal_msg.goal_pos.theta = radian_to_degree(pi/2);
        // theta_from_arctan(goal_msg.goal_pos.x, current_pos_.x,
        //                   goal_msg.goal_pos.y, current_pos_.y);
 
-    RCLCPP_INFO(this->get_logger(), "Sending goal x:%f y:%f theta %f",
+    RCLCPP_INFO(this->get_logger(), "Sending goal x:%f y:%f theta degree %f",
                 goal_msg.goal_pos.x, goal_msg.goal_pos.y,
                 goal_msg.goal_pos.theta);
 

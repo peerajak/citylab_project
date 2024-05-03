@@ -42,6 +42,9 @@ using namespace std::chrono_literals;
         2. execute() is being done in a new detached thread. Thus might now slow
             down the main thread.
 */
+
+float degree_to_radian(float degree) { return degree / 180 * pi; }
+float radian_to_degree(float rad) { return rad / pi * 180; }
 float radian_difference(float first, float second) {
   return std::abs(first - second) <= pi ? first - second
                                         : (first - second) - 2 * pi;
@@ -99,8 +102,8 @@ private:
     float delta_theta = radian_difference(target_yaw_rad_, current_yaw_rad_);
     return delta_theta < delta_error; // IN GOAL return true else false;
   }
-    bool check_reached_goal_desire_angle(float delta_error = 0.01) {
-    float delta_theta =  radian_difference(desire_pos_angle, current_yaw_rad_);
+  bool check_reached_goal_desire_angle(float delta_error = 0.01) {
+    float delta_theta = radian_difference(desire_pos_angle, current_yaw_rad_);
     return delta_theta < delta_error; // IN GOAL return true else false;
   }
   bool check_reached_goal_pos(const geometry_msgs::msg::Point goal,
@@ -190,7 +193,7 @@ private:
     //(void)uuid;
     desire_pos_.x = goal->goal_pos.x;
     desire_pos_.y = goal->goal_pos.y;
-    desire_pos_angle = goal->goal_pos.theta;
+    desire_pos_angle = degree_to_radian(goal->goal_pos.theta);
 
     target_yaw_rad_ = theta_from_arctan(desire_pos_.x, current_pos_.x,
                                         desire_pos_.y, current_pos_.y);
@@ -249,13 +252,14 @@ private:
       move_robot(ling);
       feedback->current_pos.x = current_pos_.x;
       feedback->current_pos.y = current_pos_.y;
-      feedback->current_pos.theta = current_yaw_rad_;
+      feedback->current_pos.theta = radian_to_degree( current_yaw_rad_);
       goal_handle->publish_feedback(feedback);
+    
       RCLCPP_INFO(
           this->get_logger(),
-          "Publish rotating feedback current pos=['%f','%f'] target rad "
-          "'%f',current rad %f, angular speed %f",
-          current_pos_.x, current_pos_.y, target_yaw_rad_, current_yaw_rad_,
+          "Publish rotating feedback current pos=['%f','%f'] target degree "
+          "'%f',current degree %f, angular speed (rad/sec) %f",
+          current_pos_.x, current_pos_.y,   radian_to_degree(target_yaw_rad_),   radian_to_degree(current_yaw_rad_),
           ling.angular.z);
       loop_rate.sleep();
     }
@@ -285,13 +289,13 @@ private:
       move_robot(ling);
       feedback->current_pos.x = current_pos_.x;
       feedback->current_pos.y = current_pos_.y;
-      feedback->current_pos.theta = current_yaw_rad_;
+      feedback->current_pos.theta = radian_to_degree( current_yaw_rad_);
       goal_handle->publish_feedback(feedback);
       RCLCPP_INFO(this->get_logger(),
-                  "Publish feedback current pos=['%f','%f'] target rad "
-                  "'%f',current rad %f, angular speed %f",
-                  current_pos_.x, current_pos_.y, target_yaw_rad_,
-                  current_yaw_rad_, ling.angular.z);
+                  "Publish feedback current pos=['%f','%f'] target degree "
+                  "'%f',current degree %f, angular speed (rad/sec)%f",
+                  current_pos_.x, current_pos_.y,   radian_to_degree(target_yaw_rad_),
+                    radian_to_degree(current_yaw_rad_), ling.angular.z);
 
       loop_rate.sleep();
     }
@@ -314,14 +318,14 @@ private:
       move_robot(ling);
       feedback->current_pos.x = current_pos_.x;
       feedback->current_pos.y = current_pos_.y;
-      feedback->current_pos.theta = current_yaw_rad_;
+      feedback->current_pos.theta = radian_to_degree( current_yaw_rad_);
       goal_handle->publish_feedback(feedback);
-      RCLCPP_INFO(
-          this->get_logger(),
-          "Publish rotating to desire angle feedback current pos=['%f','%f'] target rad "
-          "'%f',current rad %f, angular speed %f",
-          current_pos_.x, current_pos_.y, target_yaw_rad_, current_yaw_rad_,
-          ling.angular.z);
+      RCLCPP_INFO(this->get_logger(),
+                  "Publish rotating to desire angle feedback current "
+                  "pos=['%f','%f'] desire_pos_angle degree "
+                  "'%f',current degree %f, angular speed (rad/sec) %f",
+                  current_pos_.x, current_pos_.y,   radian_to_degree(desire_pos_angle),
+                    radian_to_degree(current_yaw_rad_), ling.angular.z);
       loop_rate.sleep();
     }
     // ling.linear.x = 0;
