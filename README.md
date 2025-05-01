@@ -56,3 +56,33 @@ Inside the patrol.cpp, create a publisher to the /cmd_vel topic (the one that co
 - Take the value of the var direction_ and use it to compute the proper angular velocity in z:
 - angular velocity in z = direction_ / 2
 - Create a launch file named start_patrolling.launch.py that starts your program.
+
+
+## Checkpoint 5
+
+Terminal 1
+
+```
+ros2 launch turtlebot3_gazebo main_turtlebot3_lab.launch.xml
+```
+
+Terminal 2
+
+```
+ros2 launch robot_patrol start_patrolling.launch.py
+```
+
+## Checkpoint 6 
+
+Terminal 1
+
+```
+ros2 launch turtlebot3_gazebo main_turtlebot3_lab.launch.xml
+```
+
+Terminal 2
+
+```
+ros2 launch robot_patrol main.launch.py
+```
+
